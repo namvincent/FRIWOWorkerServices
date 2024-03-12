@@ -2,7 +2,6 @@
 using FRIWOServerApi.Model;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Newtonsoft.Json;
 using Oracle.ManagedDataAccess.Client;
 using System;
 using System.Collections.ObjectModel;
@@ -478,54 +477,6 @@ namespace FRIWOServerApi.Data.DBServices
 
 
                 if (result == 0)
-                    return BadRequest(resultData);
-
-                return Ok(resultData);
-            }
-        }
-
-        public class DataTest { 
-            public string LowerLimit { get; set; }
-            public string Weight { get; set; }
-            public string UpperLimit { get; set; }
-        }
-
-        [HttpPost]
-        [Route("api/ProcessLock/FA/InsertPottingAsync/{unit}/{status}/{machine}/{result}")]
-        public async Task<ActionResult> InsertPottingAsync(string unit, int status,string machine,string result)
-        {
-            string[] resultL = result.Split("-");
-            var dataR = new DataTest();
-            dataR.LowerLimit = resultL[0].ToString();
-            dataR.Weight = resultL[1].ToString();
-            dataR.UpperLimit = resultL[2].ToString();
-            string resultData = "";
-            var convertjson = JsonConvert.SerializeObject(dataR);
-            byte[] blobData = System.Text.Encoding.UTF8.GetBytes(convertjson);
-
-            using (var _context = await _contextFactory.CreateDbContextAsync())
-            {               
-
-                var barcodeParam = new OracleParameter("P_BARCODE", OracleDbType.Varchar2, unit, ParameterDirection.Input);
-                var resultParam = new OracleParameter("P_STATUS", OracleDbType.Decimal, status, ParameterDirection.Input);
-                var machineParam = new OracleParameter("P_MACHINE_ID", OracleDbType.Varchar2, machine, ParameterDirection.Input);
-                var result_data = new OracleParameter("P_RESULT_DATA", OracleDbType.Blob, blobData, ParameterDirection.Input);
-                var outputParam = new OracleParameter("P_OUTPUT", OracleDbType.Varchar2, 500, resultData, ParameterDirection.Output);
-
-
-                var resultset = await _context.Database.ExecuteSqlInterpolatedAsync
-                    ($"BEGIN INSERT_POTTING_DATA ({barcodeParam} ,{machineParam},{resultParam},{result_data},{outputParam}); END;");
-
-                resultData = outputParam.Value.ToString();
-                if (resultData.Equals("1"))
-                {
-                    resultData = "1";
-                }
-                else {
-                    resultData = "-1";
-                }
-
-                if (resultset == 0)
                     return BadRequest(resultData);
 
                 return Ok(resultData);
