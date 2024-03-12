@@ -21,7 +21,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 else {
-    app.UseSwagger();
     app.UseSwaggerUI();
 }
 

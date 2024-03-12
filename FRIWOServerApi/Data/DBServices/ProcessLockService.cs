@@ -1,6 +1,5 @@
 ﻿using FRIWOServerApi.Data.TRACE;
 using FRIWOServerApi.Model;
-using MESystem.Data.TRACE;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Oracle.ManagedDataAccess.Client;
@@ -13,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace FRIWOServerApi.Data.DBServices
 {
-    public class ProcessLockService : IProcessLockService
+    public class ProcessLockService
     {
 
         public readonly IDbContextFactory<TraceDbContext> _contextFactory;
@@ -219,7 +218,5 @@ namespace FRIWOServerApi.Data.DBServices
                 return true;
             }
         }
-
-      
     }
 }
