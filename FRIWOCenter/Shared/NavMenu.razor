@@ -1,0 +1,58 @@
+﻿@*<div class="sidebar @StateCssClass">
+    <FRIWOCenter.Components.SearchItem/>
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public string? StateCssClass { get; set; }
+
+    public RenderFragment? ChildContent { get; set; }
+}*@
+@page "/NavMenu"
+
+@using System.Diagnostics.CodeAnalysis
+<div class="sidebar @StateCssClass">
+    <FRIWOCenter.Components.SearchItem/>
+    <div class="dxbl-modal-dialog">
+   
+            <div class="dxbl-modal-dialog" style="padding-top: 1rem; padding-bottom: 1rem">
+                <DxFormLayout>
+                    @*<DxFormLayoutItem Caption="Serial Port: " ColSpanMd="8">
+                        <Template>
+                            <DxComboBox Data="@availablePorts"
+                                        @bind-Value="@CurrentCOMPHV"
+                                        DropDownVisibleChanged=@OnDropDownVisibleChanges>
+                            </DxComboBox>
+                        </Template>
+                    </DxFormLayoutItem>
+                    <DxFormLayoutItem ColSpanMd="8">
+                        <Template>
+                            <MatNumericUpDownField Maximum=4 Minimum=1 Label="Pane: "
+                                                   @bind-Value="@pane">
+                            </MatNumericUpDownField>
+                        </Template>
+                    </DxFormLayoutItem>*@
+                    <DxFormLayoutItem Caption="Common setting: " ColSpanMd="12">
+                        <Template>
+                            <LayoutView>
+                                <a href="usbpiolocalexec:00_00">Start USPPIO in local</a>
+                            </LayoutView>
+                        </Template>
+                    </DxFormLayoutItem>
+
+                </DxFormLayout>
+            </div>
+</div>
+    
+</div>
+
+@code {
+    [Parameter] 
+    public EventCallback PopupClosing { get; set; }
+     [Parameter] 
+    public EventCallback PopupClosed { get; set; }
+    [Parameter]
+    public static RenderFragment? TableHeader { get; set; }
+    [Parameter] 
+    public string? StateCssClass { get; set; }
+}

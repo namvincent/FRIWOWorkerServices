@@ -1,0 +1,102 @@
+﻿
+/*.navbar.header-navbar {
+    flex-grow: 0;
+    flex-wrap: nowrap;
+    border: none;
+    background-color: inherit;
+    border-radius: 0;
+    height: 3.5rem;
+    min-height: 3.5rem;
+    box-shadow: 0px 2px 6px 0px rgba(0, 0, 0, 0.12);
+    justify-content: flex-start;
+}
+
+.header-navbar .navbar-toggler {
+    outline: none;
+    border-radius: 0;
+    padding-left: .75rem;
+    padding-right: .75rem;
+    box-shadow: none;
+    align-self: stretch;
+}
+
+.header-navbar .navbar-toggler .navbar-toggler-icon {
+    background-image: url("data:image/svg+xml;charset=utf8,%3Csvg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath stroke='rgba(255,255,255, 1)' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 8h24M4 16h24M4 24h24'/%3E%3C/svg%3E");
+    background-color: transparent !important;
+    height: 2rem;
+    width: 2rem;
+}*/
+
+.title {
+    font-size: 1.1rem;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+@media (max-width: 350px) {
+    .title {
+        font-size: inherit;
+    }
+}
+
+.head-menu-item {
+    background-color: darkgrey !important;
+    color: var(--bs-dark) !important;
+}
+
+    .head-menu-item :hover {
+        background-color: var(--bs-dark) !important;
+        color: var(--bs-dark) !important;
+    }
+.dropdown-menu {
+    background-color: darkgrey !important;
+    color: var(--bs-dark) !important;
+}
+
+.dx-menu-item.notoggle > .dropdown-menu {
+    background-color: var(--bs-dark);
+    color: var(--bs-light);
+    transform: matrix(1, 0, 0, 1, -112, -1) !important;
+}
+
+.dx-menu-item.notoggle a > span.dropdown-toggle {
+    display: none;
+}
+
+.dxbs-menu > .nav .dx-menu-item.notoggle {
+    display: none;
+}
+
+.dxbs-menu > .nav .dx-menu-item.search-menu-item {
+    display: none;
+}
+
+.dxbs-menu > .nav .separator {
+    display: none;
+}
+
+.dx-menu-item .search {
+    min-width: 123px
+}
+
+.dxbs-menu-item-tmpl > .search {
+    padding: 0.25rem;
+    position: relative;
+}
+
+.user-profile .logo-container {
+    margin-top: 1.25rem;
+    margin-bottom: 1.25rem;
+}
+
+.user-profile .log-off-btn {
+    padding-top: 0.815rem;
+    padding-bottom: 0.815rem;
+    border-top: 1px solid #e5e5e5;
+}
+
+.user-profile .menu-icon-user-profile {
+    opacity: 0.25;
+    margin-top: 1.25rem;
+    margin-bottom: 1.25rem;
+}

@@ -1,0 +1,508 @@
+﻿@page "/HighVoltage"
+
+
+@using FRIWOCenter.Model
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
+@using FRIWOCenter.DBServices.SerialPorts
+@using FRIWOCenter.Data.SerialPorts
+@using FRIWOCenter.Data.StaticObjects
+@using DevExpress.Blazor
+@using FRIWOCenter.Data.TRACE
+@using FRIWOCenter.DBServices
+@using System.Diagnostics
+@using FRIWOCenter.Components
+@using System.IO.Ports
+@using System.Collections.ObjectModel
+@using MatBlazor
+@using Microsoft.AspNetCore.Http
+@using System.Text.Json
+@using System.Text.Json.Serialization;
+
+@implements IAsyncDisposable
+
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@inject SerialService SerialService
+@inject ProcessLockService processLockService
+@inject V_ROUTING_BY_PART_NO V_ROUTING_BY_PART_NO
+@inject StationResult stationResult
+@inject ProcessLock processLock
+@inject RoutingResults routingResults
+@inject IMatToaster Toaster
+@inject IHttpClientFactory ClientFactory
+
+<PageTitle>HIGH VOLTAGE TEST</PageTitle>
+
+<div class="dxbl-modal-dialog">
+    <DxPopup CloseOnEscape="false"
+             CloseOnOutsideClick="false"
+             @bind-Visible=@requestConfirm
+             ShowFooter="true"
+             ShowCloseButton="false"
+             HeaderText="Run Test Confirmation">
+        <BodyTemplate>
+            <label>Test now?</label>
+        </BodyTemplate>
+        <FooterTemplate Context="Context">
+            <input placeholder="Test" @ref=@buttonTest class="bg-primary" @onkeydown=@(async()=>{requestConfirm = false;confirmed = true;await Task.Delay(10);
+                   await InvokeAsync(StateHasChanged);})></input>
+        </FooterTemplate>
+    </DxPopup>
+</div>
+<div class="dxbl-modal-dialog">
+    <DxPopup HeaderText="High Voltage Setup"
+             @bind-Visible=@modalShow
+             ShowFooter="true"
+             ShowCloseButton="false"
+             Closing="@PopupClosing"
+             Closed="@PopupClosed"
+             CloseOnEscape="false"
+             CloseOnOutsideClick="false">
+        <BodyTemplate Context="PopupTemplate">
+            <div class="dxbl-modal-dialog" style="padding-top: 1rem; padding-bottom: 1rem">
+                <DxFormLayout>
+                    <DxFormLayoutItem>
+                        <Template>
+                            <DxComboBox NullText="Please choosing COMP" DropDownVisibleChanged=@OnDropDownVisibleChanges Data=@availablePorts @bind-Value=@CurrentCOMPHV TextFieldName=@nameof(SerialPortItem.Name)>
+                            </DxComboBox>
+                        </Template>
+                    </DxFormLayoutItem>
+                    <DxFormLayoutItem>
+                        <Template>
+                            <MatNumericUpDownField Maximum=4 Minimum=1 Label="Pane: "
+                                                   @bind-Value="@pane">
+                            </MatNumericUpDownField>
+                        </Template>
+                    </DxFormLayoutItem>
+                    <DxFormLayoutItem>
+                        <Template>
+                            <DxCheckBox @bind-Checked=@testLater>
+                                Test after confirmation
+                            </DxCheckBox>
+                        </Template>
+                    </DxFormLayoutItem>
+                    <DxFormLayoutItem>
+                        <Template>
+                            <DxCheckBox @bind-Checked=@waitPIO>
+                                Wait USB PIO
+                            </DxCheckBox>
+                        </Template>
+                    </DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Machine: " ColSpanMd="12">
+                        <Template>
+                            <LayoutView>
+                                <img id="hvnew" src="/images/newHV_19020_4.png" @onclick='async(e) => await SetFocusImage("hvnew")' />
+                                <img id="hvold" src="/images/oldHV_se7441.png" @onclick='async(e) => await SetFocusImage("hvold")' />
+                            </LayoutView>
+                        </Template>
+                    </DxFormLayoutItem>
+
+                </DxFormLayout>
+            </div>
+        </BodyTemplate>
+        <FooterContentTemplate Context="Context">
+            <DxButton RenderStyle="ButtonRenderStyle.Success" Text="Continue" CssClass="w-10"
+                      Click="Context.CloseCallback" />
+        </FooterContentTemplate>
+    </DxPopup>
+</div>
+
+<div class="row">
+    <div class="col">
+        <div class=row>
+            <div class="col" title="Hardware & Device Info: ">
+                <MatIconButton Icon="settings" OnClick="@(()=>modalShow=true)"></MatIconButton>
+                <separator />
+                <h5><b>Serial Port: </b>@CurrentCOMPHV?.Name </h5>
+                <h5><b>Machine: </b>@hVMachine</h5>
+                <h5><b>Quantity of pane: </b>@pane</h5>
+            </div>
+            <div class="col flex-shrink-1">
+                @if (hVMachine == HVMachine.HV19020_4)
+                {
+                    <img src="images/newHV_19020_4.png" />
+                }
+                else
+                {
+                    <img src="images/oldHV_se7441.png" />
+                }
+            </div>
+        </div>
+        <div class="row">
+            <span title="COM port state" style="color: lightgray">@SerialService.SerialPortError</span>
+            @if (l_units_testing != null)
+            {
+                <div class="d-inline-flex justify-content-around">
+                    @foreach (var unit in l_units_testing)
+                    {
+                        if (unit.IsTested)
+                        {
+                            if (unit.TestResult.Result)
+                            {
+                                <MatIconButton Icon="check" class="col text-success" disabled>
+                                    @timeShow
+                                </MatIconButton>
+                            }
+                            else
+                            {
+                                <MatIconButton Icon="error" class="col text-danger" disabled>
+                                    @timeShow
+                                </MatIconButton>
+                            }
+                        }
+                        else
+                        {
+                            @*<button class="w-25 btn btn-info">@($"{unit.GetBarcode()}\nTesting")</button>*@
+
+                            @*  <h3 class="active justify-content-center">@timeShow</h3>*@
+                            <MatIconButton class="text-primary" disabled>
+                                @timeShow
+                            </MatIconButton>
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                        }
+                    }
+                </div>
+            }
+        </div>
+    </div>
+    <div class="col">
+        <div class="input-with-icon">
+            @if (IsSetup && l_units?.Count > 0)
+            {
+                @foreach (var item in l_units)
+                {
+                    @switch (l_units.IndexOf(item))
+                    {
+
+                        case 0:
+                            string styleBorder = "inherit";
+                            var readOnly = globalIdx != 0;
+                            if (!item.IsChecked)
+                            {
+                                styleBorder = "black !important";
+                            }
+                            else
+                            {
+                                styleBorder = item.GetProcessLockResult() ? "limegreen !important" : "red !important";
+
+                            }
+                            <div class="input-with-icon">
+                                <input placeholder="Barcode..." disabled=@readOnly type="text" style="color:@styleBorder; border-color:@styleBorder" class="form-control form-control-sm input-with-icon-input my-2" @ref=Barcode0 value=@item.LinkInfo.ExternalCode @onfocus=Barcode0Focus @onchange=Submit @onkeydown=BarcodeKeyin autofocus />
+                                <span style=color:@styleBorder class="input-with-icon-button d-flex pl-2 pr-2">
+                                    <MatIconButton Class=input-with-icon-button Icon=more_horiz></MatIconButton>
+                                </span>
+                            </div>
+                            break;
+
+                        case 1:
+
+                            readOnly = globalIdx != 1;
+                            if (!item.IsChecked)
+                            {
+                                styleBorder = "black !important";
+                                ;
+                            }
+                            else
+                            {
+                                styleBorder = item.GetProcessLockResult() ? "limegreen !important" : "red !important";
+
+                            }
+                            <div class="input-with-icon">
+                                <input placeholder="Barcode..." disabled=@readOnly type="text" style="color:@styleBorder; border-color:@styleBorder" class="form-control form-control-sm input-with-icon-input my-2" @ref=Barcode1 value=@item.LinkInfo.ExternalCode @onfocus=Barcode1Focus @onchange=Submit @onkeydown=BarcodeKeyin autofocus />
+                                <span style=color:@styleBorder class="input-with-icon-button d-flex pl-2 pr-2">
+                                    <MatIconButton Class=input-with-icon-button Icon=more_horiz></MatIconButton>
+                                </span>
+                            </div>
+                            break;
+                        case 2:
+                            readOnly = globalIdx != 2;
+                            if (!item.IsChecked)
+                            {
+                                styleBorder = "black !important";
+                            }
+                            else
+                            {
+                                styleBorder = item.GetProcessLockResult() ? "limegreen !important" : "red !important";
+
+                            }
+                            <div class="input-with-icon">
+                                <input placeholder="Barcode..." disabled=@readOnly type="text" style="color:@styleBorder; border-color:@styleBorder" class="form-control form-control-sm input-with-icon-input my-2" @ref=Barcode2 value=@item.LinkInfo.ExternalCode @onfocus=Barcode2Focus @onchange=Submit @onkeydown=BarcodeKeyin autofocus />
+                                <span style=color:@styleBorder class="input-with-icon-button d-flex pl-2 pr-2">
+                                    <MatIconButton Class=input-with-icon-button Icon=more_horiz></MatIconButton>
+                                </span>
+                            </div>
+                            break;
+                        case 3:
+                            readOnly = globalIdx != 3;
+                            if (!item.IsChecked)
+                            {
+                                styleBorder = "black !important";
+                            }
+                            else
+                            {
+                                styleBorder = item.GetProcessLockResult() ? "limegreen !important" : "red !important";
+
+                            }
+                            <div class="input-with-icon">
+                                <input placeholder="Barcode..." disabled=@readOnly type="text" style="color:@styleBorder; border-color:@styleBorder" class="form-control form-control-sm input-with-icon-input my-2" @ref=Barcode3 value=@item.LinkInfo.ExternalCode @onfocus=Barcode3Focus @onchange=Submit @onkeydown=BarcodeKeyin autofocus />
+                                <span style=color:@styleBorder class="input-with-icon-button d-flex pl-2 pr-2">
+                                    <MatIconButton Class=input-with-icon-button Icon=more_horiz></MatIconButton>
+                                </span>
+                            </div>
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+        </div>
+    </div>
+    <div class="row mt-5 bg-transparent">
+        @if (l_units_result != null)
+        {
+            <DxFormLayout>
+                <DxDataGrid AllowSort=false SelectionMode="DataGridSelectionMode.None" Data="@resultShow">
+                    <DxDataGridColumn Field="@nameof(Unit.TestTime)" Caption="Tested Time"></DxDataGridColumn>
+                    <DxDataGridColumn Field="@nameof(Unit.ExternalBarcode)" Caption="External Code"></DxDataGridColumn>
+                    <DxDataGridColumn Field="@nameof(Unit.ResultTest)" Caption="Result"></DxDataGridColumn>
+                    <DxDataGridColumn Field="@nameof(Unit.DataTest)" Caption="Test Data"></DxDataGridColumn>
+                    <DxDataGridColumn Field="@nameof(Unit.InternalBarcode)" Caption="Internal Code" />
+                </DxDataGrid>
+            </DxFormLayout>
+        }
+    </div>
+    @*
+        <div class="row mt-5 bg-transparent">
+        <div class="form-group">
+        <label>
+        User:
+        <input @bind="userInput" />
+        </label>
+        </div>
+        <div class="form-group">
+        <label>
+        Message:
+        <input @bind="messageInput" size="50" />
+        </label>
+        </div>
+        <button @onclick="Send" disabled="@(!IsConnected)">Send</button>
+
+        <hr>
+
+        <ul id="messagesList">
+        @foreach(var message in messages)
+        {
+        <li>@message</li>
+        }
+        </ul>
+        </div>*@
+    <div class="row mt-5 bg-transparent">
+        <div class="form-group">
+            <label>
+                <input @bind="userInput" />
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
+                <input @bind="messageInput" size="50" />
+            </label>
+        </div>
+        <button @onclick="Send" disabled="@(!IsConnected)"></button>
+
+        <hr>
+
+        <ul id="messagesList">
+            <li></li>
+        </ul>
+    </div>
+
+</div>
+
+@code {
+    private bool shouldRender;
+    protected override bool ShouldRender() => shouldRender;
+    EventHandler? timeOutEventHandler;
+    ElementReference? Barcode0 { get; set; }
+    ElementReference? Barcode1 { get; set; }
+    ElementReference? Barcode2 { get; set; }
+    ElementReference? Barcode3 { get; set; }
+    ElementReference? buttonTest { get; set; }
+    bool b0disable { get; set; }
+    bool b1disable { get; set; }
+    bool b2disable { get; set; }
+    bool b3disable { get; set; }
+    private int globalIdx { get; set; }
+    private ElementReference? currentInput { get; set; }
+    private ElementReference? nextInput { get; set; }
+    static List}<int>
+    <int>
+        <Unit>
+            <Unit>
+                <Unit>
+                    <Unit>
+                        <ResultRecord>
+                            <SerialDataItem>
+                                <SerialPortItem>
+                                    <StationResult>
+                                        <V_ROUTING_BY_PART_NO>
+                                            <string>
+                                                <string>
+                                                    <Unit>
+                                                        <Unit>
+                                                            <bool>
+                                                                <bool>
+                                                                    <string, string>
+                                                                        <List<UnitDTO>>(responseStream);
+            for(int i = 0; i < pane; i++)
+            {
+                l_units_testing[i].IsTested = rs[i].IsTested;
+                l_units_testing[i].TestResult.Result = rs[i].Result;
+                l_units_testing[i].TestResult.Data = rs[i].Data;
+            }
+        }
+
+        shouldRender = true;
+    }
+
+    private async Task SetSerialPortNameAsync(string? name)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post,$"http://localhost:5000/api/SerialPorts/COMP/{name}");
+
+        var response = await ClientFactory.CreateClient().SendAsync(request);
+    }
+
+    private async Task GetSerialPortListAsync()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get,"http://localhost:5000/api/SerialPorts/GetSerialPorts");
+
+        var response = await ClientFactory.CreateClient().SendAsync(request);
+
+        if(response.IsSuccessStatusCode)
+        {
+            using var responseStream = await response.Content.ReadAsStreamAsync();
+            availablePorts = await JsonSerializer.DeserializeAsync
+                <List<SerialPortItem>>(responseStream);
+        }
+        else
+        {
+            availablePorts?.Add(new SerialPortItem { Name = "No COMP port" });
+        }
+
+        shouldRender = true;
+    }
+
+    int _elapsedMiliSec = 0;
+    public async void IncrementTimer(object sender, System.Timers.ElapsedEventArgs e)
+    {
+        timeShow = "";
+        _elapsedMiliSec++;
+        timeShow = String.Format("{0:00.0}", ((double)_elapsedMiliSec) / 10);
+        //Console.WriteLine(timeShow);
+        if(_elapsedMiliSec > 100)
+            timeOutEventHandler.Invoke(this, eventArgs);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    EventArgs eventArgs = new EventArgs();
+    public async void TimeOutCallBack(object sender, EventArgs e)
+    {
+        if(SerialService.SerialPortIsOpen())
+            SerialService.CloseSerialPort();
+        timer.Stop();
+        timer.Elapsed -= IncrementTimer;
+        _elapsedMiliSec = 0;
+        testing = false;
+        //SerialService.Dispose();
+        SerialService.SerialPort.Close();
+        SerialService.SerialPort.DataReceived -= SerialService.DataReceivedHandler;
+
+        SerialService.FirstCmd = false;
+        if(l_units_testing != null)
+        {
+            for(var i = 0; i < pane; i++)
+            {
+
+                if(!l_units_testing[i].IsTested)
+                {
+                    l_units_testing[i].TestResult = new();
+                    l_units_testing[i].TestResult.Result = false;
+                    l_units_testing[i].TestResult.Data = "Time out... No output stream from HV machine. Please check IO card on HV machine.";
+                    l_units_testing[i].IsTested = true;
+                }
+            }
+        }
+
+        await InvokeAsync(StateHasChanged);
+
+        if(waitPIO)
+        {
+            await PIOCommunicate("usbpiolocalexec:01_00");
+            await Task.Delay(500);
+            await PIOCommunicate("usbpiolocalexec:00_00");
+        }
+        //for(var i = 0; i < pane; i++)
+        //{
+        //    l_units_result.Add(l_units_testing[i]);
+        //}
+        //await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task<int> PIOCommunicate(string cmd)
+    {
+        int rs = -1;
+        using(Process myProcess = new Process())
+        {
+            myProcess.StartInfo.UseShellExecute = true;
+            // You can start any process, HelloWorld is a do-nothing example.
+            myProcess.StartInfo.FileName = cmd;
+            myProcess.StartInfo.CreateNoWindow = true;
+            myProcess.Start();
+            myProcess.WaitForExit();
+            rs = myProcess.ExitCode;
+            Debug.WriteLine(rs);
+            // This code assumes the process you are starting will terminate itself.
+            // Given that it is started without a window so you cannot terminate it
+            // on the desktop, it must terminate itself or you can do it programmatically
+            // from this application using the Kill method.
+        };
+        await Task.CompletedTask;
+        return rs;
+    }
+
+    private async Task ClearScreen()
+    {
+        try
+        {
+            LoadingIndicator = true;
+            enableBtnCSS = false;
+            SetDefaultInfo();
+
+            await Task.Delay(100);
+            //enableBtnCSS = true;
+        }
+        catch(Exception ex)
+        {
+            Debug.WriteLine(ex.ToString());
+            //enableBtnCSS = true;
+        }
+
+        Debug.WriteLine($"End: {DateTime.Now}");
+    }
+
+    private async Task Send()
+    {
+        if(hubConnection is not null)
+        {
+            await hubConnection.SendAsync("SendMessage", userInput, messageInput);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if(hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+}

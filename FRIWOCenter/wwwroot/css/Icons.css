@@ -1,0 +1,38 @@
+﻿.menu-icon {
+    width: 1rem;
+    height: 1rem;
+    min-width: 1rem;
+    min-height: 1rem;
+    background-size: contain;
+    mask-repeat: no-repeat;
+    -webkit-mask-repeat: no-repeat;
+    background-position: center center;
+    background-color: currentColor;
+}
+
+.menu-icon-home {
+    mask-image: url("../images/Home.svg");
+    -webkit-mask-image: url("../images/home.svg");
+}
+
+.menu-icon-support {
+    mask-image: url("../images/Support.svg");
+    -webkit-mask-image: url("../images/Support.svg");
+}
+
+.menu-icon-products {
+    mask-image: url("../images/Products.svg");
+    -webkit-mask-image: url("../images/User.svg");
+}
+
+.menu-icon-user-profile {
+    mask-image: url("../images/User.svg");
+    -webkit-mask-image: url("../images/User.svg");
+}
+
+.icon-logo {
+    width: 128px;
+    height: 48px;
+    mask-image: url("../images/FRIWO_Logo.svg");
+    -webkit-mask-image: url("../images/FRIWO_Logo.svg");
+}

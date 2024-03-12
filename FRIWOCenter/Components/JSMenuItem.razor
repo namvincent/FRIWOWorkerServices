@@ -1,0 +1,24 @@
+﻿
+<DxStackLayout Class="px-4 mx-4">
+    <a href=@Link @onclick=@Click>
+        <div class="accordion-item">
+            <label>@TitleStr</label>
+        </div>
+    </a>
+</DxStackLayout>
+   
+
+@code 
+{
+    [Parameter]public string TitleStr{ get; set; }
+    [Parameter]public EventCallback<MouseEventArgs> Click { get; set; }
+    [Parameter] public string Link { get; set; }
+
+    string titleString{ get; set; }
+
+    protected override void OnInitialized()
+    {
+        titleString = TitleStr;
+        base.OnInitialized();
+    }
+}

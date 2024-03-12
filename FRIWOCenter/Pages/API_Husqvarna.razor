@@ -1,0 +1,31 @@
+﻿@page "/husqvarna"
+@namespace FRIWOCenter.Pages
+
+@using DevExpress.Blazor
+@using Microsoft.Net.Http
+@using FRIWOCenter.DBServices
+@using FRIWOCenter.Data.TRACE
+@using System.Threading.Tasks
+@inject HusqvarnaServices ServicesHusq
+
+
+<h3>API_Husqvarna</h3>
+<input type="text" />
+<button type="button" @onclick="load_api">upload</button>
+<DxDataGrid Data="@JSONREPORT" CssClass="mw-1100">
+    <DxDataGridColumn Field="@nameof(Husqvarna_Json.BODY)" Caption="@nameof(Husqvarna_Json.BODY)" />
+    <DxDataGridColumn Field="@nameof(Husqvarna_Json.BARCODE)" Caption="@nameof(Husqvarna_Json.BARCODE)" />
+</DxDataGrid>
+
+@code {
+    private List<Husqvarna_Json> JSONREPORT { get; set; } = new List<Husqvarna_Json>();
+    
+    public async Task load_api()
+    {
+        JSONREPORT = await ServicesHusq.getJSONList();
+        foreach (var result in JSONREPORT)
+        {
+            await Task.Run(() => { Console.WriteLine(result.BODY.ToString()); });
+        }
+    }
+}

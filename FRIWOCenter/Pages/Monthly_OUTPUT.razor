@@ -1,0 +1,100 @@
+﻿@page "/monthly_output"
+@namespace FRIWOCenter.Pages
+
+@using DevExpress.Blazor
+@using Microsoft.Net.Http
+@using System.IO;
+@using FRIWOCenter.Data.TRACE
+@using FRIWOCenter.DBServices
+@inject MonthlyOutputService Services
+@inject Microsoft.JSInterop.IJSRuntime JS
+
+
+<h3>OUTPUT REPORT</h3>
+<div>
+    <table>
+        <tbody>
+            <tr>
+                <td>
+                    <label for="from">From:</label>
+                </td>
+                <td>
+                    <input type="date" value="@knowledge.ToString("yyyy-MM-dd")" @onchange="@(async (e) => await UpdateFromDate(DateTime.Parse(e.Value.ToString())))">
+                </td>
+            </tr>
+            <tr>
+                <td><label for="to">To:</label></td>
+                <td><input type="date" value="@knowledge.ToString("yyyy-MM-dd")" @onchange="@(async (e) => await UpdateToDate(DateTime.Parse(e.Value.ToString())))"></td>
+            </tr>
+            <tr>
+                <td><button type="button" @onclick="load_api">Submit</button></td>
+                <td><button type="button" @onclick="CreateDocument">Export Data</button></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<div>
+    @if (ouput == null)
+    {
+
+    }
+    else
+    {
+
+        <DxDataGrid Data="@ouput" CssClass="mw-1100">
+            <DxDataGridColumn Field="@nameof(Monthly_Output.MONTHH)" Caption="@nameof(Monthly_Output.MONTHH)" />
+            <DxDataGridColumn Field="@nameof(Monthly_Output.PART_NO)" Caption="@nameof(Monthly_Output.PART_NO)" />
+            <DxDataGridColumn Field="@nameof(Monthly_Output.QTY)" Caption="@nameof(Monthly_Output.QTY)" />
+            <DxDataGridColumn Field="@nameof(Monthly_Output.PROD_TIME)" Caption="@nameof(Monthly_Output.PROD_TIME)" />
+        </DxDataGrid>
+    }
+</div>
+@code {
+
+
+    public DateTime knowledge = DateTime.Now;
+
+    public string FromDate = "";
+    public string ToDate = "";
+    private List<Monthly_Output> ouput { get; set; } = new List<Monthly_Output>();
+    public MemoryStream excelStream;
+
+    public async Task load_api()
+    {
+
+        ouput = await Services.CallPackageTest(FromDate, ToDate);
+
+        foreach (var result in ouput)
+        {
+            await Task.Run(() => { Console.WriteLine(result.MONTHH.ToString()); });
+        }
+    }
+
+    public async Task<string> UpdateToDate(DateTime date)
+    {
+        string result;
+        ToDate = await Task.Run(()=>date.AddDays(1).ToString("dd-MMM-yy HH:mm:ss")).ConfigureAwait(false);
+        return ToDate;
+
+    }
+    public async Task<string> UpdateFromDate(DateTime date)
+    {
+        string result;
+
+        FromDate = await Task.Run(()=>date.AddDays(1).ToString("dd-MMM-yy HH:mm:ss")).ConfigureAwait(false);
+        return FromDate;
+
+    }
+    /// <summary>
+    /// Create and download the Excel document.
+    /// </summary>
+    protected async Task CreateDocument()
+    {
+        if (ouput != null)
+        {
+            excelStream = await Services.CreateExcel(ouput);
+            await JS.SaveAs("Sample.xlsx", excelStream.ToArray());
+        }
+    }
+
+}

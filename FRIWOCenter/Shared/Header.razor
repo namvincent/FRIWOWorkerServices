@@ -1,0 +1,99 @@
+﻿@using FRIWOCenter.Components
+
+    <div class="text-light" style="background-color: darkgrey">
+        
+            <DxMenu Orientation="Orientation.Horizontal"
+                    ItemsPosition="ItemPosition.End"
+                    DropDownActionMode="MenuDropDownActionMode.Click"
+                    DisplayMode="MenuDisplayMode.Desktop"
+                    Title="FRIWO"
+                    CollapseItemsToHamburgerMenu="true"
+                    CollapseItemToIconMode="MenuCollapseItemToIconMode.All">
+                <TitleTemplate>
+                    <div class="logo-container d-flex align-items-center justify-content-center">
+                        <div class="icon-logo menu-icon" />
+                    </div>
+                </TitleTemplate>
+                <Items>
+                    
+                    <DxMenuItem CssClass="head-menu-item" Text="Home" IconCssClass="oi oi-home">
+                        <Items>
+                            
+                            <DxMenuItem CssClass="head-menu-item" Text="News">
+                                <Items>
+                                    <DxMenuItem Text="Explore our newest features" CssClass="head-menu-item"/>
+                                    <DxMenuItem Text="Website news" CssClass="head-menu-item"/>
+                                </Items>
+                            </DxMenuItem>
+                            <DxMenuItem Text="Our Mission" CssClass="head-menu-item"/>
+                            <DxMenuItem Text="Our Customers" CssClass="head-menu-item"/>
+                           
+                        </Items>
+                    </DxMenuItem>
+                    <DxMenuItem Text="FRIWO COMMON" IconCssClass="oi oi-list-rich">
+                        <Items>
+                             <DxMenuItem NavigateUrl="shoporderview" Text="SO Missing Tracking" />
+                        </Items>
+                    </DxMenuItem>
+                    <DxMenuItem Text="FRIWO MES" IconCssClass="oi oi-layers">
+                        <Items>
+                            <DxMenuItem Text="Getting Started" />
+                            <DxMenuItem NavigateUrl="HighVoltage" Text="High Voltage Test" />
+                            <DxMenuItem Text="Documentation" />
+                            <DxMenuItem Text="Support Center" />
+                        </Items>
+                    </DxMenuItem>
+                    <DxMenuItem Text="FRIWO REPORT" IconCssClass="oi oi-clipboard">
+                        <Items>
+                            <DxMenuItem Text="Getting Started" />
+                            <DxMenuItem NavigateUrl="RevenueDaily" Text="Revenue Daily Report" />
+                            <DxMenuItem Text="Support Center" />
+                        </Items>
+                    </DxMenuItem>
+                    <DxMenuItem CssClass="notoggle" Position="ItemPosition.End">
+                        <TextTemplate>
+                            <div class="logo-container d-flex align-items-center justify-content-center">
+                                <div class="menu-icon-user-profile menu-icon menu-icon-large" />
+                            </div>
+                        </TextTemplate>
+                        <SubMenuTemplate>
+                            <div class="w-100 user-profile">
+                                <div class="flex-column align-items-center justify-content-center">
+                                    <div class="logo-container d-flex align-items-center justify-content-center">
+                                        <div class="menu-icon-user-profile menu-icon menu-icon-large" />
+                                    </div>
+                                    <div class="user-name-container bm-3 mb-2">
+                                        <div class="tm-8 text-center">User Name</div>
+                                        <div class="text-center">Jason Nguyen</div>
+                                    </div>
+                                    <div class="d-flex justify-content-center log-off-btn">
+                                        <DxButton IconCssClass="oi oi-account-logout" RenderStyle="@ButtonRenderStyle.Secondary"></DxButton>
+                                    </div>
+                                </div>
+                            </div>
+                        </SubMenuTemplate>
+                    </DxMenuItem>
+                    <DxMenuItem IconCssClass="oi oi-cog" Click=@OnToggleClick>
+                    </DxMenuItem>
+                  
+                </Items>
+            </DxMenu>
+        </div>
+   
+@code {
+    [Parameter] public bool ToggleOn { get; set; }
+    [Parameter] public EventCallback<bool> ToggleOnChanged { get; set; }
+
+    async Task OnToggleClick() => await Toggle();
+
+    async Task Toggle(bool? value = null)
+    {
+        var newValue = value ?? !ToggleOn;
+        if(ToggleOn != newValue)
+        {
+            ToggleOn = newValue;
+            await ToggleOnChanged.InvokeAsync(ToggleOn);
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+}

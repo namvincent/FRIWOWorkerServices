@@ -1,0 +1,237 @@
+﻿@page "/shoporderview"
+
+@using FRIWOCenter.DBServices
+@using FRIWOCenter.Data.TRACE
+@using FRIWOCenter.Pages
+@using DevExpress.Blazor
+@using System.Diagnostics
+@inject ShopOrderViewService ShopOrderStatus;
+
+
+<style>
+    .hot-red {
+        background-color: red;
+    }
+    .search-button {
+        background-color: black !important;        
+    }
+</style>
+
+<div class="row">
+    <div class="col-sm-2">
+        <div class="form-group">
+            <label for="department"> Select Department</label>
+            <select id="department" class="form-control"  @onchange="ValueChangeHandler">
+                @foreach (var data in LocalData)
+                {
+                    <option value=@data.ID>@data.Content</option>
+                }
+
+            </select>
+        </div>
+
+    </div>
+
+    
+    <div class="col-sm-2">
+        <div class="form-group">
+            <label for="shoporder"> Order No </label>
+            <input id="shoporder" type="text" class="form-control" @oninput=" e=> SearchByOrder(e.Value.ToString())"/>
+        </div>
+    </div>
+   
+    <div class="col-sm-2"></div>
+</div>
+
+
+
+@if (outputSearch == null)
+{
+
+}
+else
+{
+    
+        <DxDataGrid Data="@outputSearch"
+                HtmlRowDecoration="@OnHtmlRowDecoration"  
+                ShowFilterRow="true"
+                ShowPager="true"
+                PagerNavigationMode="PagerNavigationMode.InputBox"
+                PagerPageSizeSelectorVisible="true"
+                PagerAllDataRowsItemVisible="true"
+                PagerAllowedPageSizes=@(new int[] {2,10,20,40})>
+            <DxDataGridColumn Field="@nameof(Shop_Order_Overview.DEPARTMENT_NO)" Caption="DEPARTMENT" />
+            <DxDataGridColumn Field="@nameof(Shop_Order_Overview.PART_NO)" Caption="PART NO" />
+            <DxDataGridColumn Field="@nameof(Shop_Order_Overview.ORDER_NO)" Caption="ORDER NO" />
+            <DxDataGridColumn Field="@nameof(Shop_Order_Overview.OBJSTATE)" Caption="STATUS" />
+        </DxDataGrid>
+    
+
+
+}
+
+@*<div class="row">
+
+        <h3>SHOP ORDER WITHOUT ROUTING</h3>
+</div>*@
+@*<div class="row">
+    <div class="col-sm-3">
+        <div class="form-group">
+            <label for="noRoutingPartNo">Part No</label>
+            <input id="noRoutingPartNo" class="form-control" @bind="noRoutingPartNoSearch" />
+        </div>
+    </div>
+    <div class="col-sm-3">
+        <div class="form-group">
+            <label for="noRoutingOrderNo"> Order No</label>
+            <input id="noRoutingOrderNo" class="form-control" @bind="noRoutingOrderNoSearch" />
+        </div>
+    </div>
+    <div class="col-sm-2">
+        <div class="form-group">
+                <label for="searchNoRouting"></label>
+                <button type="button" id="searchNoRouting" class="form-control search-button" @oninput="SearchNoRouting">Search</button>
+        </div>
+
+    </div>
+    <div class="col-sm-4"></div>
+</div>*@
+@*<br />
+    <div class="row">
+        <DxDataGrid Data="@SO_no_routing_search">
+            <DxDataGridColumn Field="@nameof(Shop_Order_Without_Routing.ORDER_CODE)" Caption="@nameof(Shop_Order_Without_Routing.ORDER_CODE)" />
+            <DxDataGridColumn Field="@nameof(Shop_Order_Without_Routing.PART_NO)" Caption="@nameof(Shop_Order_Without_Routing.PART_NO)" />
+            <DxDataGridColumn Field="@nameof(Shop_Order_Without_Routing.ORDER_NO)" Caption="@nameof(Shop_Order_Without_Routing.ORDER_NO)" />
+            <DxDataGridColumn Field="@nameof(Shop_Order_Without_Routing.OBJSTATE)" Caption="@nameof(Shop_Order_Without_Routing.OBJSTATE)" />
+        </DxDataGrid>
+
+    </div>*@
+
+@code {
+    public string selectedDepartmentNo { get; set; }
+    public string selectedOrderNo { get; set; }
+    public string selectedPartNo { get; set; }
+
+    public string noRoutingOrderNoSearch { get; set; }
+    public string noRoutingPartNoSearch { get; set; }
+    public string value = "BB";
+
+    public class Department
+    {
+        public string ID { get; set; }
+        public string Content { get; set; }
+
+    }
+
+    List<Department> LocalData = new List<Department> {
+            new Department() { ID= "BB", Content= "BOX BUILD" },
+            new Department() { ID= "SMD", Content= "SMD" },
+            new Department() { ID= "MI", Content= "MANUAL INSERT" },
+            new Department() { ID= "", Content= "NO ROUTING" },
+        };
+
+
+    private List<Shop_Order_Overview> masterdata { get; set; }
+    private List<Shop_Order_Overview> outputSearch { get; set; }
+    private List<Shop_Order_Without_Routing> SO_no_routing { get; set; }
+    private List<Shop_Order_Without_Routing> SO_no_routing_search { get; set; }
+    string cond1 = "";
+    string cond2 = "";
+    protected override async Task OnInitializedAsync()
+    {
+        //SO_no_routing = await Shoporderstatus.GetShopOrderWithoutRouting();
+         value = "BB";
+        
+         switch (value)
+        {
+            case "BB":
+                cond1 = "V3500";
+                cond2 = "E3500";
+                break;
+            case "MI":
+                cond1 = "V3150";
+                cond2 = "";
+                break;
+            case "SMD":
+                cond1 = "V3100";
+                cond2 = "V3110";
+                break;
+            default:
+                cond1 = "";
+                cond2 = "";
+                break;
+        }
+        masterdata = await ShopOrderStatus.GetShopOrderData(value);
+        outputSearch = masterdata.Where<Shop_Order_Overview>(e => e.DEPARTMENT_NO == cond1 || e.DEPARTMENT_NO == cond2).ToList();       
+        
+    }
+
+    private async void ValueChangeHandler(ChangeEventArgs e)
+    {
+        value = e.Value.ToString();       
+        switch (value)
+        {
+            case "BB":
+                cond1 = "V3500";
+                cond2 = "E3500";
+                break;
+            case "MI":
+                cond1 = "V3150";
+                cond2 = "";
+                break;
+            case "SMD":
+                cond1 = "V3100";
+                cond2 = "V3110";
+                break;
+            default:
+                cond1 = null;
+                cond2 = null;
+                break;
+        }
+        outputSearch = masterdata.Where<Shop_Order_Overview>(e => e.DEPARTMENT_NO == cond1 || e.DEPARTMENT_NO == cond2).ToList();
+        await InvokeAsync(StateHasChanged);
+          
+        }
+
+        private void Search()
+        {
+            //ouput = await Shoporderstatus.GetShopOrderDataSearch(value, selectedDepartmentNo, selectedOrderNo, selectedPartNo);
+           
+            StateHasChanged();
+        }
+
+        private async void SearchNoRouting()
+        {
+            SO_no_routing = await ShopOrderStatus.GetShopOrderDataSearchNoRouting(noRoutingOrderNoSearch, noRoutingPartNoSearch);
+            StateHasChanged();
+        }
+
+        void OnHtmlRowDecoration(DataGridHtmlRowDecorationEventArgs<Shop_Order_Overview> eventArgs)
+        {
+            if (eventArgs.DataItem.OBJSTATE != "Started")
+                eventArgs.CssClass = "danger";
+        }
+
+
+        private async void SearchByOrder(string value)
+        {
+            
+            await Task.Run(() => {
+                if (value == null || value.Equals(""))
+                {
+                    outputSearch = masterdata.Where<Shop_Order_Overview>(e => e.DEPARTMENT_NO == cond1 || e.DEPARTMENT_NO == cond2).ToList();
+                    
+                } else
+                {
+                    outputSearch = masterdata.FindAll(c => c.ORDER_NO.Equals(value));
+                    //SO_no_routing_search = SO_no_routing.FindAll(c => c.ORDER_NO.Equals(value));
+                }
+
+
+            });
+            //StateHasChanged();
+            await InvokeAsync(StateHasChanged);
+            Debug.WriteLine(value);
+        }
+
+    }

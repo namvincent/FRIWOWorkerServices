@@ -1,0 +1,13 @@
+﻿@page "/"
+
+<a href="USBPIOLocalExec://Hello_PIO">Start USPPIO in local</a>
+
+@code{
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if(firstRender)
+        {
+            MainLayout.IsSidebarExpanded = false;
+        }
+    }
+}

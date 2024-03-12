@@ -1,0 +1,154 @@
+﻿@page "/RevenueDaily"
+
+@using FRIWOCenter.DBServices
+@using FRIWOCenter.Data.TRACE
+@using FRIWOCenter.Pages
+@using DevExpress.Blazor
+@using System.Diagnostics
+@using FRIWOCenter.Components
+@using FRIWOCenter.Shared
+
+@inject IJSRuntime JSRuntime
+@inject BusinessReportService ReportBusiness
+
+<title>REVENUE</title>
+    <div class="row">
+        <DxFormLayout CaptionPosition="CaptionPosition.Vertical">
+            <DxFormLayoutItem Caption="Total: ">
+                <DxTextBox ReadOnly=true Text=@totalPrice CssClass="col-sm"/>
+            </DxFormLayoutItem>
+       
+            <DxFormLayoutItem Caption="Date: ">
+               
+                    <DxDateEdit
+                                @bind-Date=@selectedDate
+                                Mask="dddd, dd MMMM yyyy"
+                                CustomDisabledDate=@OnCustomDisabledDate />
+        </DxFormLayoutItem>
+        </DxFormLayout>
+    </div>
+ @*   <br />
+    <div class="row">
+
+        @if (businessreports == null)
+        {
+            <Loading LoadIndicator="true" />
+        }
+        else
+        {*@
+            <DxChart Data="@businessreports" CssClass="jschart" LabelOverlap="ChartLabelOverlap.ShowAll">
+                <DxChartLegend Position="RelativePosition.Outside" HorizontalAlignment="HorizontalAlignment.Center" />
+                <DxChartArgumentAxis ArgumentType="ChartAxisDataType.String">
+                </DxChartArgumentAxis>
+                <DxChartValueAxis Name="Output" Alignment="ChartAxisAlignment.Far">
+                    <DxChartAxisTitle Text="Output" />
+                </DxChartValueAxis>
+                <DxChartValueAxis Name="Revenue" Alignment="ChartAxisAlignment.Near">
+                    <DxChartAxisTitle Text="Revenue" />
+                </DxChartValueAxis>
+                <DxChartBarSeries Axis="Revenue" ArgumentField="@((BusinessReport s) => s.Part_no)" Color="System.Drawing.Color.DarkOrange" ValueField="((BusinessReport s) => s.Price)" Name="Revenue">
+                </DxChartBarSeries>
+                <DxChartBarSeries Axis="Output" ArgumentField="@((BusinessReport s) => s.Part_no)" Color="System.Drawing.Color.AntiqueWhite" ValueField="((BusinessReport s) => s.Output)" Name="Output">
+                </DxChartBarSeries>
+            </DxChart>
+        <DxDataGrid Data="@businessreports" CssClass="jsgrid" AutoCollapseDetailRow="true">
+              <DxDataGridColumn AllowSort="true" Field="@nameof(BusinessReport.Part_no)" Caption="@nameof(BusinessReport.Part_no)"></DxDataGridColumn>
+                <DxDataGridSpinEditColumn AllowSort="true" Field="@nameof(BusinessReport.Output)" Caption="@nameof(BusinessReport.Output)" />
+                <DxDataGridSpinEditColumn DisplayFormat="c" AllowSort="true" Field="@nameof(BusinessReport.Price)" Caption="Revenue" />
+         </DxDataGrid>
+     @*   }
+
+    </div>*@
+@code
+{
+    //EventCallback<bool> DetailShowCallback { get; set; }
+
+    bool loading { get; set; }
+    string detailCssClass { get; set; }
+
+    bool detailShow { get; set; }
+
+
+    public string totalPrice { get; set; }
+
+    public string totalPriceStr { get; set; }
+
+    public string selectedArea { get; set; }
+
+    string formattedDate { get; set; }
+
+    DateTime _selectedDate;
+
+    DateTime selectedDate { get => _selectedDate; set { _selectedDate = value; reportByDate(); } }
+
+    IEnumerable<BusinessReport> businessreports_master { get; set; }
+
+    IEnumerable<BusinessReport> businessreports { get; set; }
+
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        try
+        {
+            loading = true;
+            businessreports_master = await ReportBusiness.GetRevenueAsync();
+        }catch
+        {
+
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if(firstRender)
+        {
+            selectedDate = DateTime.Today;
+        }
+
+        base.OnAfterRender(firstRender);
+    }
+
+    public void reportByDate()
+    {
+        if (businessreports_master != null)
+        {
+            loading = true;
+            totalPrice = "";
+            formattedDate = selectedDate.ToString("dd-MMM-yy").ToUpper();
+            var res = businessreports_master.Where(e => e.Date.Contains(formattedDate));
+            businessreports = res.OrderByDescending(x => x.Price).AsEnumerable();
+
+            Debug.WriteLine(businessreports.ToList().Count);
+            totalPrice = String.Format("{0:c}", Math.Round(businessreports.Sum(i => i.Price) * 100) / 100);
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+
+    void OnCustomDisabledDate(CalendarCustomDisabledDateEventArgs args)
+    {
+        args.IsDisabled = args.Date < DateTime.Today.AddDays(-2)
+            || args.Date > DateTime.Today
+            || GetDisabledDates().Exists(d => DaysEqual(d, args.Date));
+    }
+
+    bool DaysEqual(DateTime date1, DateTime date2)
+    {
+        return (date1.Year == date2.Year && date1.DayOfYear == date2.DayOfYear);
+    }
+
+    List<DateTime> GetDisabledDates()
+    {
+        DateTime baseDate = DateTime.Today;
+        return new List<DateTime>()
+            {
+            };
+    }
+
+}
