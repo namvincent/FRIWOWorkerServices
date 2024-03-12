@@ -4,15 +4,12 @@ namespace FRIWO.WorkerServices
 {
     public class Worker : BackgroundService
     {
-        public const int pinWorking = 17;
+        int pinWorking = 17;
         int pinFail = 2;
-        int pinFailIndicator = 3;
         int pinPass = 5;
-        int pinPassIndicator = 6;
-        int pinMeasuring = 26;
-        int pinMeasuringIndicator = 19;
-        int pinNG = 22;
-        int pinNGIndicator = 23;
+        int pinTestingIndicator = 6;
+        int pinPassIndicator = 22;
+        int pinFailIndicator = 23;
         int pinCheckLink = 24;
         int pinCheckStation = 27;
         int startTest = 25;
@@ -65,16 +62,16 @@ namespace FRIWO.WorkerServices
             Console.WriteLine("End testing. Result LED is shown");
             if (pass)
             {
-                // controller?.Write(pinNG, PinValue.High);
-                // await Task.Delay(5000);
-                // controller?.Write(pinNG, PinValue.Low);
+                controller?.Write(pinPassIndicator, PinValue.High);
+                await Task.Delay(5000);
+                controller?.Write(pinPassIndicator, PinValue.Low);
             }
 
             else
             {
-                //     controller?.Write(pinNGIndicator, PinValue.High);
-                //     await Task.Delay(5000);
-                //     controller?.Write(pinNGIndicator, PinValue.Low);
+                controller?.Write(pinFailIndicator, PinValue.High);
+                await Task.Delay(5000);
+                controller?.Write(pinFailIndicator, PinValue.Low);
             }
         }
 
@@ -83,7 +80,6 @@ namespace FRIWO.WorkerServices
             bool p1 = false;
             bool p2 = false;
             bool p3 = false;
-            bool p4 = false;
             int counter = 0;
             Console.WriteLine("Start blinking LED");
 
@@ -92,25 +88,18 @@ namespace FRIWO.WorkerServices
                 controller.OpenPin(pinWorking, PinMode.Output);
                 controller.OpenPin(pinFail, PinMode.Output);
                 controller.OpenPin(pinPass, PinMode.Output);
-                controller.OpenPin(pinNG, PinMode.Output);
-                controller.OpenPin(pinNGIndicator, PinMode.Output);
+                controller.OpenPin(pinTestingIndicator, PinMode.Output);
                 controller.OpenPin(pinPassIndicator, PinMode.Output);
                 controller.OpenPin(pinFailIndicator, PinMode.Output);
-                controller.OpenPin(pinMeasuringIndicator, PinMode.Output);
                 controller.OpenPin(pinCheckLink, PinMode.Output);
                 controller.OpenPin(pinCheckStation, PinMode.Output);
                 controller.OpenPin(startTest, PinMode.Output);
-                controller.OpenPin(pinMeasuring, PinMode.Output);
-                controller.Write(pinNG, PinValue.Low);
-                controller.Write(pinNGIndicator, PinValue.Low);
                 controller.Write(pinPassIndicator, PinValue.Low);
                 controller.Write(pinFailIndicator, PinValue.Low);
-                controller.Write(pinMeasuringIndicator, PinValue.Low);
                 controller.Write(pinCheckLink, PinValue.Low);
                 controller.Write(pinCheckStation, PinValue.Low);
                 controller.Write(pinWorking, PinValue.Low);
                 controller.Write(startTest, PinValue.Low);
-                controller.Write(pinMeasuring, PinValue.Low);
             }
             controller.Write(startTest, PinValue.Low);
             while (!stoppingToken.IsCancellationRequested)
@@ -130,30 +119,27 @@ namespace FRIWO.WorkerServices
                         var rq = new HttpRequestMessage();
                         rq.Method = HttpMethod.Post;
                         rq.Content = new StringContent($"\"{barcode}\"", Encoding.UTF8, "application/json");
+                        // var requestStr = $"http://fvn-nb-077.friwo.local:5100/api/ProcessLock/FA/GetLinkData";
                         var requestStr = $"http://fvn-s-web01.friwo.local:5000/api/ProcessLock/FA/GetLinkData";
-                        // var requestStr = $"http://fvn-s-web01.friwo.local:5000/api/ProcessLock/FA/GetLinkData";
                         rq.RequestUri = new Uri(requestStr);
                         var rs = await _httpClient.SendAsync(rq);
                         var responseBody = await rs.Content.ReadAsStringAsync();
                         barcode = responseBody;
-
-                        // barcode = "1212112121212121212121";//fake internal UID
                         Console.WriteLine("Barcode: " + barcode);
                         ///////////////////////////////////////////////////////////////
-                        // if (barcode.Length > 2 && barcode != "null")
-                        // {
-                        //     var httpRQ = new HttpRequestMessage();
-                        //     httpRQ.Method = HttpMethod.Post;
-                        //     // var previousCheck = $"http://fvn-nb-077.friwo.local:5000/api/ProcessLock/FA/CheckPreviousStation/{barcode}/VACUUM STATION";  
-                        //     var previousCheck = $"http://fvn-s-web01.friwo.local:5000/api/ProcessLock/FA/CheckPreviousStation/{barcode}/PCBA HEIGHT CHECK";
-                        //     Console.WriteLine(previousCheck);
-                        //     httpRQ.RequestUri = new Uri(previousCheck);
-                        //     //var rsData = await _httpClient.SendAsync(httpRQ);
-                        //     //var previousresponseBody = await rsData.Content.ReadAsStringAsync();
-                        //     //stationCheck = Int16.Parse(previousresponseBody);
-                        stationCheck = 1;
-                        //     Console.WriteLine("Previous Check: " + stationCheck.ToString());
-                        // }
+                        if (barcode.Length > 2 && barcode != "null")
+                        {
+                            var httpRQ = new HttpRequestMessage();
+                            httpRQ.Method = HttpMethod.Post;
+                            // var previousCheck = $"http://fvn-nb-077.friwo.local:5100/api/ProcessLock/FA/CheckPreviousStation/{barcode}/VACUUM STATION";  
+                            var previousCheck = $"http://fvn-s-web01.friwo.local:5000/api/ProcessLock/FA/CheckPreviousStation/{barcode}/PCBA HEIGHT CHECK";
+                            Console.WriteLine(previousCheck);
+                            httpRQ.RequestUri = new Uri(previousCheck);
+                            var rsData = await _httpClient.SendAsync(httpRQ);
+                            var previousresponseBody = await rsData.Content.ReadAsStringAsync();
+                            stationCheck = Int16.Parse(previousresponseBody);
+                            Console.WriteLine("Previous Check: " + stationCheck.ToString());
+                        }
 
                     }
                     else
@@ -164,11 +150,8 @@ namespace FRIWO.WorkerServices
                     {
                         controller.Write(pinCheckLink, PinValue.Low);
                         controller.Write(pinCheckStation, PinValue.Low);
-                        controller.Write(pinNGIndicator, PinValue.Low);
                         controller.Write(pinPassIndicator, PinValue.Low);
                         controller.Write(pinFailIndicator, PinValue.Low);
-                        controller.Write(pinMeasuringIndicator, PinValue.Low);
-                        controller.Write(pinNG, PinValue.Low);
                         controller.Write(startTest, PinValue.Low);
                         if (barcode.Length > 2 && barcode != "null")
                         {
@@ -181,14 +164,12 @@ namespace FRIWO.WorkerServices
                             {
                                 p1 = false;
                                 controller.Write(pinCheckStation, PinValue.High);
-
                             }
                         }
                         else
                         {
                             p1 = false;
                             controller.Write(pinCheckLink, PinValue.High);
-
                         }
                     }
                 }
@@ -199,7 +180,6 @@ namespace FRIWO.WorkerServices
                     p1 = false;
                     p2 = false;
                     p3 = false;
-                    p4 = false;
                     Console.WriteLine(ex);
                 }
 
@@ -207,40 +187,16 @@ namespace FRIWO.WorkerServices
                 Console.WriteLine((p1).ToString());
 
                 Console.WriteLine((p2).ToString());
-                int waitMeasuring = 0;
-                bool timeOut = false;
+
                 if (p1)
                 {
-
+                    //write_analog_outputs("00_00");
                     testing = true;
-
-
-                    while (!controller?.Read(pinMeasuring) == PinValue.High)
+                    if (controller != null)
                     {
-                        Console.WriteLine("Waiting measure...");
-                        await Task.Delay(500, stoppingToken);
-                        waitMeasuring++;
-                        if (waitMeasuring >= 20)
-                        {
-                            Console.WriteLine("Fail measure!!!");
-                            controller.Write(pinNG, PinValue.High);
-                            timeOut = true;
-                            break;
-                        }
-                    }
-                    if (!timeOut)
-                    {
-                        controller.Write(pinMeasuringIndicator, PinValue.High);
+                        controller?.Write(pinTestingIndicator, PinValue.High);
                     }
                 }
-                else
-                {
-                    controller.Write(pinNGIndicator, PinValue.High);
-                }
-
-                // testing=true;
-
-
 
                 while (testing)
                 {
@@ -248,32 +204,16 @@ namespace FRIWO.WorkerServices
                     try
                     {
                         //read_analog_outputs(ref p1, ref p2);
+                        var rs = controller?.Read(pinPass);
+                        if (rs == PinValue.High)
+                        {
+                            p2 = true;
 
-                        if (!timeOut)
-                        {
-                            var rs1 = controller?.Read(pinFail);
-                            var rs2 = controller?.Read(pinNG);
-                            if (rs1 == PinValue.High)
-                            {
-                                p3 = true;
-                                controller.Write(pinMeasuringIndicator, PinValue.Low);
-                            }
-                            if (rs2 == PinValue.High)
-                            {
-                                p4 = true;
-                                controller.Write(pinMeasuringIndicator, PinValue.Low);
-                            }
-                            var rs = controller?.Read(pinPass);
-                            if (rs == PinValue.High)
-                            {
-                                p2 = true;
-                                controller.Write(pinMeasuringIndicator, PinValue.Low);
-                            }
                         }
-                        else
+                        var rs1 = controller?.Read(pinFail);
+                        if (rs1 == PinValue.High)
                         {
-                            p4 = true;
-                            controller.Write(pinMeasuringIndicator, PinValue.Low);
+                            p3 = true;
                         }
                     }
                     catch (Exception ex)
@@ -283,7 +223,6 @@ namespace FRIWO.WorkerServices
                         p1 = false;
                         p2 = false;
                         p3 = false;
-                        p4 = false;
                         Console.WriteLine(ex);
                     }
 
@@ -301,8 +240,8 @@ namespace FRIWO.WorkerServices
                         {
                             var rq = new HttpRequestMessage();
                             rq.Method = HttpMethod.Post;
-                            // var requestStr = $"http://fvn-nb-077.friwo.local:5000/api/ProcessLock/FA/InsertVauumAsync/" + barcode.ToString()+"/"+1;
-                            var requestStr = $"http://fvn-s-web01.friwo.local:5000/api/ProcessLock/Cable/InsertCableDimensionAsync/" + barcode.ToString() + "/" + 1 + "/PI/AS";
+                            // var requestStr = $"http://fvn-nb-077.friwo.local:5100/api/ProcessLock/FA/InsertVauumAsync/" + barcode.ToString()+"/"+1;
+                            var requestStr = $"http://fvn-s-web01.friwo.local:5000/api/ProcessLock/FA/InsertPCBHeightCheckAsync" + barcode.ToString() + "/" + 1;
                             // var requestStr = $"http://fvn-s-ws01.friwo.local:5000/api/ProcessLock/AOI/InsertPASSAOIAsync/" + barcode.ToString();
                             Console.WriteLine(requestStr);
                             rq.RequestUri = new Uri(requestStr);
@@ -310,7 +249,7 @@ namespace FRIWO.WorkerServices
                             //write_analog_outputs("00_00");
                             //var rs = await _httpClient.CreateClient().SendAsync(new HttpRequestMessage(HttpMethod.Post, "http://fvn-nb-077.friwo.local:5000/api/ProcessLock/LaserTrimming/InsertFAILAsync/"));
                             controller.Write(pinPassIndicator, PinValue.High);
-
+                            controller.Write(startTest, PinValue.Low);
                             Console.WriteLine(rs.StatusCode);
                             if (rs.StatusCode == System.Net.HttpStatusCode.OK)
                             {
@@ -328,7 +267,6 @@ namespace FRIWO.WorkerServices
                             p1 = false;
                             p2 = false;
                             p3 = false;
-                            p4 = false;
                             counter = 0;
 
                         }
@@ -339,7 +277,6 @@ namespace FRIWO.WorkerServices
                             p1 = false;
                             p2 = false;
                             p3 = false;
-                            p4 = false;
                             Console.WriteLine(ex);
                         }
                     }
@@ -350,10 +287,13 @@ namespace FRIWO.WorkerServices
                         try
                         {
                             //write_analog_outputs("00_00");
+
+
+
                             var rq = new HttpRequestMessage();
                             rq.Method = HttpMethod.Post;
-                            // var requestStr = $"http://fvn-nb-077.friwo.local:5000/api/ProcessLock/FA/InsertVauumAsync/" + barcode.ToString() + "/" + 0;
-                            var requestStr = $"http://fvn-s-web01.friwo.local:5000/api/ProcessLock/Cable/InsertCableDimensionAsync/" + barcode.ToString() + "/" + 0 + "/PI/FAIL";
+                            // var requestStr = $"http://fvn-nb-077.friwo.local:5100/api/ProcessLock/FA/InsertVauumAsync/" + barcode.ToString() + "/" + 0;
+                            var requestStr = $"http://fvn-s-web01.friwo.local:5000/api/ProcessLock/FA/InsertPCBHeightCheckAsync" + barcode.ToString() + "/" + 0;
                             Console.WriteLine(requestStr);
                             rq.RequestUri = new Uri(requestStr);
                             var rs = await _httpClient.SendAsync(rq);
@@ -377,7 +317,6 @@ namespace FRIWO.WorkerServices
                             p1 = false;
                             p2 = false;
                             p3 = false;
-                            p4 = false;
                             counter = 0;
                         }
                         catch (Exception ex)
@@ -387,74 +326,24 @@ namespace FRIWO.WorkerServices
                             p1 = false;
                             p2 = false;
                             p3 = false;
-                            p4 = false;
                             Console.WriteLine(ex);
                         }
 
-
-                    }
-                    if (p4)
-                    {
-                        try
-                        {
-                            //write_analog_outputs("00_00");
-                            var rq = new HttpRequestMessage();
-                            rq.Method = HttpMethod.Post;
-                            // var requestStr = $"http://fvn-nb-077.friwo.local:5000/api/ProcessLock/FA/InsertVauumAsync/" + barcode.ToString() + "/" + 0;
-                            var requestStr = $"http://fvn-s-web01.friwo.local:5000/api/ProcessLock/Cable/InsertCableDimensionAsync/" + barcode.ToString() + "/" + 0 + "/PI/NG";
-                            Console.WriteLine(requestStr);
-                            rq.RequestUri = new Uri(requestStr);
-                            var rs = await _httpClient.SendAsync(rq);
-                            controller.Write(pinNGIndicator, PinValue.High);
-                            controller.Write(startTest, PinValue.Low);
-                            Console.WriteLine(rs.StatusCode);
-                            if (rs.StatusCode == System.Net.HttpStatusCode.OK)
-                            {
-                                showResult(false, stoppingToken);
-                                Console.WriteLine("Data is sent. >>>>>>>>>>GOOD");
-                                _logger.LogInformation("Data is sent. >>>>>>>>>>GOOD");
-                            }
-                            else
-                            {
-                                Console.WriteLine("Cannot update data");
-                                _logger.LogInformation("Cannot update data");
-                                showResult(false, stoppingToken);
-                            }
-
-                            testing = false;
-                            p1 = false;
-                            p2 = false;
-                            p3 = false;
-                            p4 = false;
-                            counter = 0;
-                        }
-                        catch (Exception ex)
-                        {
-                            counter = 0;
-                            testing = false;
-                            p1 = false;
-                            p2 = false;
-                            p3 = false;
-                            p4 = false;
-                            Console.WriteLine(ex);
-                        }
-
-
                     }
 
-                    if (counter >= 15)
+                    if (counter >= 28)
                     {
                         try
                         {
 
                             var rq = new HttpRequestMessage();
                             rq.Method = HttpMethod.Post;
-                            var requestStr = $"http://fvn-s-web01.friwo.local:5000/api/ProcessLock/Cable/InsertCableDimensionAsync/" + barcode.ToString() + "/" + 0 + "/PI/TIMEOUT";
-                            // var requestStr = $"http://fvn-s-web01.friwo.local:5000/api/ProcessLock/FA/InsertPCBHeightCheckAsync/" + barcode.ToString() + "/" + 0;
+                            // var requestStr = $"http://fvn-nb-077.friwo.local:5100/api/ProcessLock/FA/InsertPCBHeightCheckAsync" + barcode.ToString() + "/" + 0;
+                            var requestStr = $"http://fvn-s-web01.friwo.local:5000/api/ProcessLock/FA/InsertPCBHeightCheckAsync" + barcode.ToString() + "/" + 0;
                             // var requestStr = $"http://fvn-s-ws01.friwo.local:5000/api/ProcessLock/AOI/InsertFAILAOIAsync/" + barcode.ToString();
                             Console.WriteLine(requestStr);
                             rq.RequestUri = new Uri(requestStr);
-                            controller.Write(pinNGIndicator, PinValue.High);
+                            controller.Write(pinFailIndicator, PinValue.High);
                             controller.Write(startTest, PinValue.Low);
                             var rs = await _httpClient.SendAsync(rq);
                             Console.WriteLine(rs.StatusCode);
@@ -476,7 +365,8 @@ namespace FRIWO.WorkerServices
                             p1 = false;
                             p2 = false;
                             p3 = false;
-                            p4 = false;
+
+
                         }
                         catch (Exception ex)
                         {
@@ -485,7 +375,6 @@ namespace FRIWO.WorkerServices
                             p1 = false;
                             p2 = false;
                             p3 = false;
-                            p4 = false;
                             Console.WriteLine(ex);
                         }
 
