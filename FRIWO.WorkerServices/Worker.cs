@@ -337,9 +337,7 @@ namespace FRIWO.WorkerServices
 
                             var rq = new HttpRequestMessage();
                             rq.Method = HttpMethod.Post;
-                            // var requestStr = $"http://fvn-nb-077.friwo.local:5100/api/ProcessLock/FA/InsertVauumAsync/" + barcode.ToString() + "/" + 0;
                             var requestStr = $"http://fvn-s-web01.friwo.local:5000/api/ProcessLock/FA/InsertWeldingAsync/" + barcode.ToString() + "/" + 0;
-                            // var requestStr = $"http://fvn-s-ws01.friwo.local:5000/api/ProcessLock/AOI/InsertFAILAOIAsync/" + barcode.ToString();
                             Console.WriteLine(requestStr);
                             rq.RequestUri = new Uri(requestStr);
                             controller.Write(pinFailIndicator, PinValue.High);
