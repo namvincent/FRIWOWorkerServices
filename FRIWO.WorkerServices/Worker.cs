@@ -1,13 +1,10 @@
 using System.Device.Gpio;
 using System.Text;
-using Iot.Device.Graphics;
-using System.Device.I2c;
-using Iot.Device.Ssd13xx;
 namespace FRIWO.WorkerServices
 {
     public class Worker : BackgroundService
     {
-        int pinWorking = 21;
+        int pinReset = 21;
         int pinFail = 17;
         int pinPass = 5;
         int pinTestingIndicator = 6;
@@ -88,7 +85,7 @@ namespace FRIWO.WorkerServices
           
             if (controller != null)
             {
-                controller.OpenPin(pinWorking, PinMode.Output);
+                controller.OpenPin(pinReset, PinMode.Output);
                 controller.OpenPin(pinFail, PinMode.Output);
                 controller.OpenPin(pinPass, PinMode.Output);
                 controller.OpenPin(pinTestingIndicator, PinMode.Output);
@@ -101,7 +98,7 @@ namespace FRIWO.WorkerServices
                 controller.Write(pinFailIndicator, PinValue.Low);
                 controller.Write(pinCheckLink, PinValue.Low);
                 controller.Write(pinCheckStation, PinValue.Low);
-                controller.Write(pinWorking, PinValue.Low);
+                controller.Write(pinReset, PinValue.Low);
                 controller.Write(startTest, PinValue.Low);
             }
             controller.Write(startTest, PinValue.Low);
@@ -122,7 +119,7 @@ namespace FRIWO.WorkerServices
                         rq.Method = HttpMethod.Post;
                         rq.Content = new StringContent($"\"{barcode}\"", Encoding.UTF8, "application/json");
                         // var requestStr = $"http://fvn-nb-077.friwo.local:5100/api/ProcessLock/FA/GetLinkData";
-                        var requestStr = $"http://fvn-s-web01.friwo.local:5000/api/ProcessLock/FA/GetLinkData";
+                        var requestStr = $"http://10.100.10.83:5000/api/ProcessLock/FA/GetLinkData";
                         rq.RequestUri = new Uri(requestStr);
                         var rs = await _httpClient.SendAsync(rq);
                         var responseBody = await rs.Content.ReadAsStringAsync();
@@ -131,14 +128,12 @@ namespace FRIWO.WorkerServices
                         ///////////////////////////////////////////////////////////////
                         if (barcode.Length > 2 && barcode != "null")
                         {
-                            var httpRQ = new HttpRequestMessage();
-                            httpRQ.Method = HttpMethod.Post;
-                            // var previousCheck = $"http://fvn-nb-077.friwo.local:5100/api/ProcessLock/FA/CheckPreviousStation/{barcode}/VACUUM STATION";  
-                            var previousCheck = $"http://fvn-s-web01.friwo.local:5000/api/ProcessLock/FA/CheckPreviousStation/{barcode}/LEAKAGE%20CURRENT";
-                            Console.WriteLine(previousCheck);
-                            httpRQ.RequestUri = new Uri(previousCheck);
-                            var rsData = await _httpClient.SendAsync(httpRQ);
-                            var previousresponseBody = await rsData.Content.ReadAsStringAsync();
+                            var client = new HttpClient();
+                            var request = new HttpRequestMessage(HttpMethod.Post, $"http://10.100.10.83:5000/api/ProcessLock/FA/CheckPreviousStation/{barcode}/LEAKAGE%20CURRENT");
+                            var response = await client.SendAsync(request);
+                            response.EnsureSuccessStatusCode();
+                            Console.WriteLine(await response.Content.ReadAsStringAsync());
+                            var previousresponseBody = await response.Content.ReadAsStringAsync();
                             stationCheck = Int16.Parse(previousresponseBody);
                             Console.WriteLine("Previous Check: " + stationCheck.ToString());
                         }
@@ -154,6 +149,7 @@ namespace FRIWO.WorkerServices
                         controller.Write(pinPassIndicator, PinValue.Low);
                         controller.Write(pinFailIndicator, PinValue.Low);
                         controller.Write(startTest, PinValue.Low);
+                        controller.Write(pinReset, PinValue.Low);
                         if (barcode.Length > 2 && barcode != "null")
                         {
                             if (stationCheck > 0)
@@ -201,7 +197,6 @@ namespace FRIWO.WorkerServices
 
                 while (testing)
                 {
-                    blindLED(pinWorking, stoppingToken);
                     try
                     {
                         //read_analog_outputs(ref p1, ref p2);
@@ -242,7 +237,7 @@ namespace FRIWO.WorkerServices
                             var rq = new HttpRequestMessage();
                             rq.Method = HttpMethod.Post;
                             // var requestStr = $"http://fvn-nb-077.friwo.local:5100/api/ProcessLock/FA/InsertVauumAsync/" + barcode.ToString()+"/"+1;
-                            var requestStr = $"http://fvn-s-web01.friwo.local:5000/api/ProcessLock/FG/InsertLeakageCurrentAsync/" + barcode.ToString() + "/" + 1+"/"+ Environment.MachineName;
+                            var requestStr = $"http://10.100.10.83:5000/api/ProcessLock/FG/InsertLeakageCurrentAsync/" + barcode.ToString() + "/" + 1+"/"+ Environment.MachineName;
                             // var requestStr = $"http://fvn-s-ws01.friwo.local:5000/api/ProcessLock/AOI/InsertPASSAOIAsync/" + barcode.ToString();
                             Console.WriteLine(requestStr);
                             rq.RequestUri = new Uri(requestStr);
@@ -251,6 +246,9 @@ namespace FRIWO.WorkerServices
                             //var rs = await _httpClient.CreateClient().SendAsync(new HttpRequestMessage(HttpMethod.Post, "http://fvn-nb-077.friwo.local:5000/api/ProcessLock/LaserTrimming/InsertFAILAsync/"));
                             controller.Write(pinPassIndicator, PinValue.High);
                             controller.Write(startTest, PinValue.Low);
+                            controller.Write(pinReset, PinValue.High);
+                            await Task.Delay(500);
+                            controller.Write(pinReset, PinValue.Low);
                             Console.WriteLine(rs.StatusCode);
                             if (rs.StatusCode == System.Net.HttpStatusCode.OK)
                             {
@@ -294,13 +292,16 @@ namespace FRIWO.WorkerServices
                             var rq = new HttpRequestMessage();
                             rq.Method = HttpMethod.Post;
                             // var requestStr = $"http://fvn-nb-077.friwo.local:5100/api/ProcessLock/FA/InsertVauumAsync/" + barcode.ToString() + "/" + 0;
-                            var requestStr = $"http://fvn-s-web01.friwo.local:5000/api/ProcessLock/FG/InsertLeakageCurrentAsync/" + barcode.ToString() + "/" + 0+"/"+ Environment.MachineName;
+                            var requestStr = $"http://10.100.10.83:5000/api/ProcessLock/FG/InsertLeakageCurrentAsync/" + barcode.ToString() + "/" + 0+"/"+ Environment.MachineName;
                             //    var requestStr = $"http://fvn-s-ws01.friwo.local:5000/api/ProcessLock/AOI/InsertFAILAOIAsync/" + barcode.ToString();
                             Console.WriteLine(requestStr);
                             rq.RequestUri = new Uri(requestStr);
                             var rs = await _httpClient.SendAsync(rq);
                             controller.Write(pinFailIndicator, PinValue.High);
                             controller.Write(startTest, PinValue.Low);
+                            controller.Write(pinReset, PinValue.High);
+                            await Task.Delay(500);
+                            controller.Write(pinReset, PinValue.Low);
                             Console.WriteLine(rs.StatusCode);
                             if (rs.StatusCode == System.Net.HttpStatusCode.OK)
                             {
@@ -333,18 +334,21 @@ namespace FRIWO.WorkerServices
 
                     }
 
-                    if (counter >= 12)
+                    if (counter >= 10)
                     {
                         try
                         {
 
                             var rq = new HttpRequestMessage();
                             rq.Method = HttpMethod.Post;
-                            var requestStr = $"http:/http://fvn-s-web01.friwo.local:5000/api/ProcessLock/FG/InsertLeakageCurrentAsync/" + barcode.ToString() + "/" + 0 +"/"+ Environment.MachineName;
+                            var requestStr = $"http://10.100.10.83:5000/api/ProcessLock/FG/InsertLeakageCurrentAsync/" + barcode.ToString() + "/" + 0 +"/"+ Environment.MachineName;
                             Console.WriteLine(requestStr);
                             rq.RequestUri = new Uri(requestStr);
                             controller.Write(pinFailIndicator, PinValue.High);
                             controller.Write(startTest, PinValue.Low);
+                            controller.Write(pinReset, PinValue.High);
+                            await Task.Delay(500);
+                            controller.Write(pinReset, PinValue.Low);
                             var rs = await _httpClient.SendAsync(rq);
                             Console.WriteLine(rs.StatusCode);
                             if (rs.StatusCode == System.Net.HttpStatusCode.OK)
@@ -381,7 +385,6 @@ namespace FRIWO.WorkerServices
                     }
                     await Task.Delay(1000, stoppingToken);
                 }
-                controller?.Write(pinWorking, PinValue.High);
                 await Task.Delay(1000, stoppingToken);
             }
         }
