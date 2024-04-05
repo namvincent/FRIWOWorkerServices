@@ -85,22 +85,7 @@ namespace FRIWO.WorkerServices
             bool p3 = false;
             int counter = 0;
             Console.WriteLine("Start blinking LED");
-           // Initialize I2c connection
-            using (var i2c = new I2cDevice(new I2cConnectionSettings(1, 0x3C)))
-            {
-                // Initialize SSD1306 OLED display
-                using (var oled = new Ssd1306(i2c))
-                {
-                    // Clear the display
-                    oled.Clear();
-
-                    // Display text
-                    oled.WriteLine("Hello, OLED!");
-
-                    // Update the display
-                    oled.Show();
-                }
-            }
+          
             if (controller != null)
             {
                 controller.OpenPin(pinWorking, PinMode.Output);
@@ -137,7 +122,7 @@ namespace FRIWO.WorkerServices
                         rq.Method = HttpMethod.Post;
                         rq.Content = new StringContent($"\"{barcode}\"", Encoding.UTF8, "application/json");
                         // var requestStr = $"http://fvn-nb-077.friwo.local:5100/api/ProcessLock/FA/GetLinkData";
-                        var requestStr = $"http://fvn-s-ws01.friwo.local:5000/api/ProcessLock/FA/GetLinkData";
+                        var requestStr = $"http://fvn-s-web01.friwo.local:5000/api/ProcessLock/FA/GetLinkData";
                         rq.RequestUri = new Uri(requestStr);
                         var rs = await _httpClient.SendAsync(rq);
                         var responseBody = await rs.Content.ReadAsStringAsync();
@@ -149,7 +134,7 @@ namespace FRIWO.WorkerServices
                             var httpRQ = new HttpRequestMessage();
                             httpRQ.Method = HttpMethod.Post;
                             // var previousCheck = $"http://fvn-nb-077.friwo.local:5100/api/ProcessLock/FA/CheckPreviousStation/{barcode}/VACUUM STATION";  
-                            var previousCheck = $"http://fvn-s-ws01.friwo.local:5000/api/ProcessLock/FA/CheckPreviousStation/{barcode}/WELDING";
+                            var previousCheck = $"http://fvn-s-web01.friwo.local:5000/api/ProcessLock/FA/CheckPreviousStation/{barcode}/LEAKAGE%20CURRENT";
                             Console.WriteLine(previousCheck);
                             httpRQ.RequestUri = new Uri(previousCheck);
                             var rsData = await _httpClient.SendAsync(httpRQ);
@@ -257,7 +242,7 @@ namespace FRIWO.WorkerServices
                             var rq = new HttpRequestMessage();
                             rq.Method = HttpMethod.Post;
                             // var requestStr = $"http://fvn-nb-077.friwo.local:5100/api/ProcessLock/FA/InsertVauumAsync/" + barcode.ToString()+"/"+1;
-                            var requestStr = $"http://fvn-s-web01.friwo.local:5000/api/ProcessLock/FA/InsertWeldingAsync/" + barcode.ToString() + "/" + 1;
+                            var requestStr = $"http://fvn-s-web01.friwo.local:5000/api/ProcessLock/FG/InsertLeakageCurrentAsync/" + barcode.ToString() + "/" + 1+"/"+ Environment.MachineName;
                             // var requestStr = $"http://fvn-s-ws01.friwo.local:5000/api/ProcessLock/AOI/InsertPASSAOIAsync/" + barcode.ToString();
                             Console.WriteLine(requestStr);
                             rq.RequestUri = new Uri(requestStr);
@@ -309,7 +294,7 @@ namespace FRIWO.WorkerServices
                             var rq = new HttpRequestMessage();
                             rq.Method = HttpMethod.Post;
                             // var requestStr = $"http://fvn-nb-077.friwo.local:5100/api/ProcessLock/FA/InsertVauumAsync/" + barcode.ToString() + "/" + 0;
-                            var requestStr = $"http://fvn-s-web01.friwo.local:5000/api/ProcessLock/FA/InsertWeldingAsync/" + barcode.ToString() + "/" + 0;
+                            var requestStr = $"http://fvn-s-web01.friwo.local:5000/api/ProcessLock/FG/InsertLeakageCurrentAsync/" + barcode.ToString() + "/" + 0+"/"+ Environment.MachineName;
                             //    var requestStr = $"http://fvn-s-ws01.friwo.local:5000/api/ProcessLock/AOI/InsertFAILAOIAsync/" + barcode.ToString();
                             Console.WriteLine(requestStr);
                             rq.RequestUri = new Uri(requestStr);
@@ -355,7 +340,7 @@ namespace FRIWO.WorkerServices
 
                             var rq = new HttpRequestMessage();
                             rq.Method = HttpMethod.Post;
-                            var requestStr = $"http://fvn-s-web01.friwo.local:5000/api/ProcessLock/FA/InsertWeldingAsync/" + barcode.ToString() + "/" + 0;
+                            var requestStr = $"http:/http://fvn-s-web01.friwo.local:5000/api/ProcessLock/FG/InsertLeakageCurrentAsync/" + barcode.ToString() + "/" + 0 +"/"+ Environment.MachineName;
                             Console.WriteLine(requestStr);
                             rq.RequestUri = new Uri(requestStr);
                             controller.Write(pinFailIndicator, PinValue.High);
