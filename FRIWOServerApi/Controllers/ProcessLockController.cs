@@ -482,5 +482,30 @@ namespace FRIWOServerApi.Data.DBServices
                 return Ok(resultData);
             }
         }
+
+        [HttpPost]
+        [Route("api/ProcessLock/AOI/InsertLeakageCurrentAsync/")]
+        public async Task<ActionResult> InsertLeakageCurrentAsync([FromBody] string unit, [FromBody]int status, [FromBody]string machineID)
+        {
+            string[] data = unit.Split("-");
+            using (var _context = await _contextFactory.CreateDbContextAsync())
+            {
+                var P_BARCODE = new OracleParameter("P_BARCODE", OracleDbType.Varchar2, unit, ParameterDirection.Input);
+
+                var P_STATUS = new OracleParameter("P_STATUS", OracleDbType.Int32, status, ParameterDirection.Input);
+
+                var P_MACHINE_ID = new OracleParameter("P_MACHINE_ID", OracleDbType.Varchar2, machineID, ParameterDirection.Input);
+
+                var result = await _context.Database.ExecuteSqlInterpolatedAsync
+                    ($"BEGIN TRACE.TRS_DATA_LEAKAGE_PRC.TRS_DATA_LEAKAGE_CURRENT_PRC ({P_BARCODE}  ,{P_STATUS} ,{P_MACHINE_ID}); END;");            
+
+
+
+                if (result == 0)
+                    return BadRequest();
+
+                return Ok();
+            }
+        }
     }
 }

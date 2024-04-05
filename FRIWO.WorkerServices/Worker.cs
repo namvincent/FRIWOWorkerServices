@@ -1,5 +1,8 @@
 using System.Device.Gpio;
 using System.Text;
+using Iot.Device.Graphics;
+using System.Device.I2c;
+using Iot.Device.Ssd13xx;
 namespace FRIWO.WorkerServices
 {
     public class Worker : BackgroundService
@@ -82,7 +85,22 @@ namespace FRIWO.WorkerServices
             bool p3 = false;
             int counter = 0;
             Console.WriteLine("Start blinking LED");
+           // Initialize I2c connection
+            using (var i2c = new I2cDevice(new I2cConnectionSettings(1, 0x3C)))
+            {
+                // Initialize SSD1306 OLED display
+                using (var oled = new Ssd1306(i2c))
+                {
+                    // Clear the display
+                    oled.Clear();
 
+                    // Display text
+                    oled.WriteLine("Hello, OLED!");
+
+                    // Update the display
+                    oled.Show();
+                }
+            }
             if (controller != null)
             {
                 controller.OpenPin(pinWorking, PinMode.Output);
@@ -382,5 +400,6 @@ namespace FRIWO.WorkerServices
                 await Task.Delay(1000, stoppingToken);
             }
         }
+        
     }
 }
