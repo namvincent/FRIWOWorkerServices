@@ -11,11 +11,8 @@ namespace FRIWO.WorkerServices
     public class Worker : BackgroundService
     {
         private static Regex smdReg = new Regex("^^\\d{7}([-])\\d{5}([-])\\S{1}$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-        [Inject]
-        private MultimeterServices? multimeterServices
-        {
-            get; set;
-        }
+        private static Regex uidReg = new Regex("^^\\d{6}", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+       
         int pinWorking = 17;
         int pinFailStation = 2;
         int pinPass = 5;
@@ -28,6 +25,8 @@ namespace FRIWO.WorkerServices
         string barcodeWaiting = "";
         string barcode = "";
 
+        string uid="0";
+        string tempUid = "0";
         //Keypress listener
         DateTime? _lastKeystroke = new DateTime(0);
         List<char>? _barcode = new List<char>(50);
@@ -79,12 +78,11 @@ namespace FRIWO.WorkerServices
             portName = null;
             int counter = 0;
             int firstTest = 0;
-            string station = "THT 2";
+            string station = "THT 1";
 
             bool countCheck = true;
             int? count = 0;
             string? tempOrder = "";
-            MultimeterResult test = new MultimeterResult();
             Console.WriteLine("Start blinking LED");
 
             if (controller != null)
@@ -115,9 +113,9 @@ namespace FRIWO.WorkerServices
                     barcode = "";
                     int? stationCheck = 0;
                     bool checkRegEx = true;
+                    bool checkUidReg = true;
                     Console.Write("Enter barcode: ");
                     val = Console.ReadLine();
-                    test = new MultimeterResult();
 
                     
                     if (val.Length > 2 && val != "")
@@ -125,7 +123,20 @@ namespace FRIWO.WorkerServices
                         barcode = val;
                         checkRegEx = smdReg.IsMatch(barcode);
                         if(!checkRegEx){
-                            barcode = "";                            
+                            checkUidReg = uidReg.IsMatch(barcode);
+                            if(checkUidReg){
+                                tempUid = barcode;
+                                if(!tempUid.Equals(uid)){
+                                    uid = tempUid;
+                                    "Update UID Success!".WriteLineColor(ConsoleColor.Green);
+                                }else{
+                                    uid = "0";
+                                    "CheckOut UID Success!".WriteLineColor(ConsoleColor.Yellow);
+                                }
+                                
+                            }
+                            barcode = "";   
+
                         }
                                                
                         //////////Check Routing 
@@ -133,7 +144,7 @@ namespace FRIWO.WorkerServices
                         {
                             var httpRQ = new HttpRequestMessage();
                             httpRQ.Method = HttpMethod.Post;
-                            var previousCheck = $"http://fvn-s-web01.friwo.local:5000/api/ProcessLock/MI/CheckPreviousSMDStation/{barcode}/{station}";
+                            var previousCheck = $"http://10.100.10.83:5000/api/ProcessLock/MI/CheckPreviousSMDStation/{barcode}/{station}";
                             httpRQ.RequestUri = new Uri(previousCheck);
                             var rsData = await _httpClient.SendAsync(httpRQ);
                             var previousresponseBody = await rsData.Content.ReadAsStringAsync();
@@ -165,7 +176,7 @@ namespace FRIWO.WorkerServices
                                 "Fail Station!".WriteLineColor(ConsoleColor.Red);
                             }
                         }
-                        else
+                        else if(!checkUidReg)
                         {
                             p1 = false;
                             controller.Write(pinFailStation, PinValue.High);
@@ -212,11 +223,12 @@ namespace FRIWO.WorkerServices
                         {
                             var rq = new HttpRequestMessage();
                             rq.Method = HttpMethod.Post;                            
-                            var requestStr = $"http://fvn-s-web01.friwo.local:5000/api/ProcessLock/SMT/InsertTHTDta/" + barcode.Split("-")[0].ToString() + "/" + barcode.ToString() +"/"+ 1 +"/"+ station;                            
+                            var requestStr = $"http://10.100.10.83:5000/api/ProcessLock/SMT/InsertTHTDataWithOperator/" + barcode.Split("-")[0].ToString() + "/" + barcode.ToString() +"/"+ 1 +"/"+ station+"/"+ uid;                            
                             rq.RequestUri = new Uri(requestStr);
+                            //Console.WriteLine(requestStr);
                             var rs = await _httpClient.SendAsync(rq);
                             var rsultData = await rs.Content.ReadAsStringAsync(); 
-
+                            //rsultData.ToString().WriteLineColor(ConsoleColor.Yellow);
                             //checking count and insert status
                             if(tempOrder != barcode.Split("-")[0].ToString())
                             {
@@ -227,13 +239,14 @@ namespace FRIWO.WorkerServices
                             {
                                 var rq_1 = new HttpRequestMessage();
                                 rq_1.Method = HttpMethod.Post;                            
-                                var requestStrCnt = $"http://fvn-s-web01:5000/api/GetData/SMT/CountQTYByShopOrder/" + barcode.Split("-")[0].ToString() + "/" + station;
+                                var requestStrCnt = $"http://10.100.10.83:5000/api/GetData/SMT/CountQTYByShopOrder/" + barcode.Split("-")[0].ToString() + "/" + station;
                                 rq_1.RequestUri = new Uri(requestStrCnt);
                                 var rs_1 = await _httpClient.SendAsync(rq_1);
                                 var countData =  await rs_1.Content.ReadAsStringAsync(); 
                                 tempOrder = barcode.Split("-")[0].ToString();
                                 count = Int16.Parse(countData);
-                                countCheck = false;      
+                                countCheck = false;
+                                //Console.WriteLine(rsultData);
                                 if(rsultData.ToString() == "1")
                                 {                                                                              
                                     "Successful !".WriteLineColor(ConsoleColor.Green);
@@ -251,14 +264,22 @@ namespace FRIWO.WorkerServices
                                 }
                             }
                             string countOut = "Total Qty of SO " +  barcode.Split("-")[0].ToString() + " : " + count;
-                            countOut.WriteLineColor(ConsoleColor.Yellow); 
-
+                            countOut.WriteLineColor(ConsoleColor.Green); 
+                            string uidInfo = "Operator: "+uid;
+                            uidInfo.WriteLineColor(ConsoleColor.Green);
+                            if(uid.Equals("0")){
+                                var rq1 = new HttpRequestMessage();
+                                rq1.Method = HttpMethod.Get;
+                                var requestStr1 = $"http://10.100.10.83:5000/api/Email/Alarmoperatorid?line={station}&type=The%20station%20still%20has%20not%20scanned%20the%20operator%20ID%20yet%20%21";
+                                rq1.RequestUri = new Uri(requestStr1);
+                                var rs1 = await _httpClient.SendAsync(rq1);
+                                var responseBody1 = await rs1.Content.ReadAsStringAsync();
+                                "No Operator ID - Send Alarm Email !".WriteLineColor(ConsoleColor.Red);
+                            }
                             await Task.Delay(1000);
                             controller.Write(pinPassStation, PinValue.Low);
                             controller.Write(pinFailStation, PinValue.Low);
-                            controller.Write(startTest, PinValue.Low);
-                            test.Status.WriteLineColor(ConsoleColor.Green);
-                            test.Measure.WriteLineColor(ConsoleColor.Green);
+                            controller.Write(startTest, PinValue.Low);                            
                             if (rs.StatusCode == System.Net.HttpStatusCode.OK)
                             {
                                 showResult(true, stoppingToken);
@@ -290,35 +311,7 @@ namespace FRIWO.WorkerServices
 
                         try
                         {
-                            BodyInsertData body = new BodyInsertData(){
-                                Barcode = barcode.ToString(),
-                                Status = 1,
-                                MachineID="PI",
-                                // Result = test.Measure.Trim()+"@@"+test.Measure.Trim()
-                                Result = test.Measure.Trim()
-                            };
-                            var bodyJson = JsonSerializer.Serialize(body);
-                            var rq = new HttpRequestMessage();
-                            rq.Method = HttpMethod.Post;
-                            rq.Content = new StringContent(bodyJson, Encoding.UTF8, "application/json");
-                            // var requestStr = $"http://fvn-nb-132.friwo.local:5000/api/ProcessLock/FA/InsertCheckLEDDataAsync/";
-                            var requestStr = $"http://fvn-s-web01.friwo.local:5000/api/ProcessLock/FA/InsertCheckLEDDataAsync/";
-                            // Console.WriteLine(requestStr);
-                            rq.RequestUri = new Uri(requestStr);
-                            var rs = await _httpClient.SendAsync(rq);
-                            controller.Write(startTest, PinValue.Low);
-                            test.Status.WriteLineColor(ConsoleColor.Red);
-                            test.Measure.WriteLineColor(ConsoleColor.Red);
-                            if (rs.StatusCode == System.Net.HttpStatusCode.OK)
-                            {
-                                showResult(false, stoppingToken);
-
-                            }
-                            else
-                            {
-
-                                showResult(false, stoppingToken);
-                            }
+                           
 
                             testing = false;
                             p1 = false;
@@ -342,65 +335,6 @@ namespace FRIWO.WorkerServices
                 await Task.Delay(1000, stoppingToken);
             }
         }
-		 async Task<MultimeterResult> GetResultData()
-		{
-
-            MultimeterResult testResult = new MultimeterResult();
-            if (string.IsNullOrEmpty(portName))
-            {
-                foreach (var item in serialList)
-                {
-
-                    SerialPort test = new SerialPort(item);
-                    try
-                    {
-                        test.Open();
-                        Console.WriteLine(item);
-                        if (test.IsOpen == true)
-                        {
-                            portName = item;
-                            test.Close();
-                            break;
-                            }
-                        }
-                    catch (Exception) { }
-                 }
-            }
-                    SerialPort myport = new SerialPort(portName);
-                    List<MultimeterResult> resultData = new();
-                    myport.ReadTimeout = 50000;
-                    myport.WriteTimeout = 50000;
-                    myport.Open();
-                    string measure = "";
-                    for (int i = 0; i < 150; i++)
-                    {
-                        myport.WriteLine("COMP?");
-                        myport.WriteLine("VAL1?");
-
-                        string serialRead = myport.ReadLine();
-                        if (!serialRead.StartsWith(".") && !string.IsNullOrEmpty(serialRead) && !serialRead.Contains(">") && !serialRead.Contains("!>") && !serialRead.Contains("=>") && !serialRead.Contains("?>") && !serialRead.Contains("PASS") && !serialRead.Contains("P") && !serialRead.Contains("PAPASS") && !serialRead.Contains("LO") && !serialRead.Contains("HI"))
-                        {
-                            measure = serialRead;
-                        }
-                        if (serialRead.Contains("PASS"))
-                        {
-                            testResult.Status = "PASS";
-                            myport.ReadLine();
-                            testResult.Measure = myport.ReadLine();
-                            // resultData.Add(testResult);
-                            break;
-                        }else{
-                            testResult.Status = "FAIL";
-                            testResult.Measure = measure;
-                        }
-                        Console.WriteLine(testResult.Measure);
-                        Console.WriteLine(testResult.Status);
-                        await Task.Delay(100);
-
-
-                    }
-                    myport.Close();
-					return testResult;
-   		}
+		
     }
 }
