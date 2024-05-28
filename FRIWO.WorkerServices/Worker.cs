@@ -14,6 +14,8 @@ namespace FRIWO.WorkerServices
         int pinPower = 24;
         int pinCheckStation = 27;
         int startTest = 25;
+        int Scanner = 19;
+        int Button = 26;
         string barcodeWaiting = "";
         string barcode = "";
 
@@ -82,7 +84,8 @@ namespace FRIWO.WorkerServices
             bool p2 = false;
             bool p3 = false;
             int counter = 0;
-            Console.WriteLine("Start blinking LED");
+            string tempCode = "";
+            Console.WriteLine("Ultrasonic Ready!");
 
             if (controller != null)
             {
@@ -96,6 +99,8 @@ namespace FRIWO.WorkerServices
                 controller.OpenPin(pinCheckStation, PinMode.Output);
                 controller.OpenPin(startTest, PinMode.Output);
                 controller.OpenPin(pinCheckPassUltra, PinMode.Output);
+                controller.OpenPin(Scanner, PinMode.Output);
+                controller.OpenPin(Button, PinMode.Output);
                 controller.Write(pinPassIndicator, PinValue.Low);
                 controller.Write(pinFailIndicator, PinValue.Low);
                 controller.Write(pinPower, PinValue.High);
@@ -103,6 +108,8 @@ namespace FRIWO.WorkerServices
                 controller.Write(pinWorking, PinValue.Low);
                 controller.Write(startTest, PinValue.Low);
                 controller.Write(pinCheckPassUltra, PinValue.Low);
+                controller.Write(Scanner, PinValue.Low);
+                controller.Write(Button, PinValue.Low);
             }
             controller.Write(startTest, PinValue.Low);
             while (!stoppingToken.IsCancellationRequested)
@@ -110,12 +117,16 @@ namespace FRIWO.WorkerServices
                 _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
                 try
                 {
+                    controller.Write(Scanner, PinValue.High);
+                    controller.Write(Button, PinValue.High);
                     string? val;
                     barcode = "";
                     int? stationCheck = 0;
                     int? checkPassUltra = 0;
                     Console.Write("Enter barcode: ");
                     val = Console.ReadLine();
+                    controller.Write(Scanner, PinValue.Low);
+                    controller.Write(Button, PinValue.Low);
                     if (val.Length > 2 && val != "")
                     {
                         barcode = val;
@@ -168,9 +179,10 @@ namespace FRIWO.WorkerServices
                         {
                             if (stationCheck > 0)
                             {
-                                if(checkPassUltra == 0){
+                                if(checkPassUltra == 0 && !tempCode.Equals(barcode)){
                                     p1 = true;
                                     controller.Write(startTest, PinValue.High);
+                                    tempCode = barcode.ToString();
                                     await Task.Delay(500, stoppingToken);
                                 }else{
                                     controller.Write(pinCheckPassUltra, PinValue.High);
