@@ -123,6 +123,7 @@ namespace FRIWO.WorkerServices
                     barcode = "";
                     int? stationCheck = 0;
                     int? checkPassUltra = 0;
+                    Console.ReadKey(false);
                     Console.Write("Enter barcode: ");
                     val = Console.ReadLine();
                     controller.Write(Scanner, PinValue.Low);
