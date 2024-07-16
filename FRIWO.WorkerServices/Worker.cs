@@ -123,11 +123,12 @@ namespace FRIWO.WorkerServices
                     barcode = "";
                     int? stationCheck = 0;
                     int? checkPassUltra = 0;
-                    Console.ReadKey(false);
+                    //Console.ReadKey(true);
                     Console.Write("Enter barcode: ");
                     val = Console.ReadLine();
                     controller.Write(Scanner, PinValue.Low);
                     controller.Write(Button, PinValue.Low);
+                    
                     if (val.Length > 2 && val != "")
                     {
                         barcode = val;
@@ -412,7 +413,7 @@ namespace FRIWO.WorkerServices
                     }
                     await Task.Delay(1000, stoppingToken);
                 }                
-                await Task.Delay(1000, stoppingToken);
+                //await Task.Delay(1000, stoppingToken);
             }
         }
     }
