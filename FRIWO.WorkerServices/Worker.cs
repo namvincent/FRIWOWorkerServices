@@ -4,7 +4,6 @@ using System.IO.Ports;
 using System.Linq;
 using Microsoft.AspNetCore.Components;
 using System.Text.Json;
-using MarkingComponent;
 
 namespace FRIWO.WorkerServices
 {
